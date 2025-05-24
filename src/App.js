@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 
 // Connect to backend socket.io server - update with your backend IP and port
-const socket = io("https://chat-backend-k6v0.onrender.com");
+
+const socket = io('https://chat-backend-k6v0.onrender.com', {
+  transports: ['websocket'],
+  secure: true
+});
+
 
 function App() {
   const [status, setStatus] = useState('Connecting...');
