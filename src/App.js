@@ -1,8 +1,6 @@
-// Updated App.js with video chat and YouTube sync support
-
 import { useEffect, useRef, useState } from 'react';
-import { io } from 'socket.io-client';
 import SimplePeer from 'simple-peer';
+import { io } from 'socket.io-client';
 
 const socket = io('https://chat-backend-k6v0.onrender.com', {
   transports: ['websocket'],
@@ -18,6 +16,8 @@ function App() {
   const [peer, setPeer] = useState(null);
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [player, setPlayer] = useState(null);
+  const [videoChatStarted, setVideoChatStarted] = useState(false);
+  const [showVideoChat, setShowVideoChat] = useState(false);
   const messagesEndRef = useRef(null);
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
@@ -37,23 +37,10 @@ function App() {
       setMessages([]);
     });
 
-    socket.on('paired', async () => {
+    socket.on('paired', () => {
       setStatus('You are now chatting with a stranger.');
       setPaired(true);
       setMessages([]);
-
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setStream(stream);
-      localVideoRef.current.srcObject = stream;
-
-      const newPeer = new SimplePeer({ initiator: true, trickle: false, stream });
-
-      newPeer.on('signal', data => socket.emit('webrtc-signal', data));
-      newPeer.on('stream', remoteStream => {
-        remoteVideoRef.current.srcObject = remoteStream;
-      });
-
-      setPeer(newPeer);
     });
 
     socket.on('webrtc-signal', signal => {
@@ -63,6 +50,8 @@ function App() {
     socket.on('partner left', () => {
       setStatus('Stranger disconnected. Click "Find New Partner" to connect again.');
       setPaired(false);
+      setVideoChatStarted(false);
+      setShowVideoChat(false);
     });
 
     socket.on('chat message', (msg) => {
@@ -86,17 +75,7 @@ function App() {
     socket.on('youtube-pause', () => player?.pauseVideo());
 
     return () => {
-      socket.off('connect');
-      socket.off('waiting');
-      socket.off('paired');
-      socket.off('partner left');
-      socket.off('chat message');
-      socket.off('disconnect');
-      socket.off('connect_error');
-      socket.off('webrtc-signal');
-      socket.off('youtube-url');
-      socket.off('youtube-play');
-      socket.off('youtube-pause');
+      socket.off();
     };
   }, [peer, player]);
 
@@ -120,6 +99,25 @@ function App() {
     }
   }, []);
 
+  const startVideoChat = async () => {
+    if (!videoChatStarted) {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setStream(stream);
+      localVideoRef.current.srcObject = stream;
+
+      const newPeer = new SimplePeer({ initiator: true, trickle: false, stream });
+
+      newPeer.on('signal', data => socket.emit('webrtc-signal', data));
+      newPeer.on('stream', remoteStream => {
+        remoteVideoRef.current.srcObject = remoteStream;
+      });
+
+      setPeer(newPeer);
+      setVideoChatStarted(true);
+      setShowVideoChat(true);
+    }
+  };
+
   const sendMessage = (e) => {
     e.preventDefault();
     if (message.trim() && paired) {
@@ -130,15 +128,13 @@ function App() {
   };
 
   const findNewPartner = () => {
-    if (paired) {
-      socket.disconnect();
-      setTimeout(() => socket.connect(), 100);
-      setStatus('Reconnecting and looking for a new partner...');
-      setPaired(false);
-      setMessages([]);
-    } else {
-      setStatus('Already waiting for a partner...');
-    }
+    socket.disconnect();
+    setTimeout(() => socket.connect(), 100);
+    setStatus('Reconnecting and looking for a new partner...');
+    setPaired(false);
+    setMessages([]);
+    setVideoChatStarted(false);
+    setShowVideoChat(false);
   };
 
   const extractVideoId = (url) => {
@@ -152,32 +148,42 @@ function App() {
       <h2>🌐 Random Chat + Video + YouTube</h2>
       <p><b>Status:</b> {status}</p>
 
-      <div style={{ display: 'flex', gap: 10 }}>
-        <video ref={localVideoRef} autoPlay muted width="200" />
-        <video ref={remoteVideoRef} autoPlay width="200" />
-      </div>
+      <button onClick={startVideoChat} disabled={!paired || videoChatStarted} style={{ padding: '10px 20px', width: '100%', marginBottom: 10 }}>
+        Start Video Chat
+      </button>
 
-      <div style={{ border: '1px solid gray', height: 300, overflowY: 'auto', padding: 10, marginTop: 10, background: '#f9f9f9', whiteSpace: 'pre-wrap' }}>
-        {messages.map((msg, idx) => (
-          <div key={idx} style={{ textAlign: msg.sender === 'you' ? 'right' : 'left', marginBottom: 5 }}>
-            <span style={{ display: 'inline-block', background: msg.sender === 'you' ? '#dcf8c6' : '#fff', padding: 8, borderRadius: 10, maxWidth: '70%', wordWrap: 'break-word', border: '1px solid #ccc' }}>{msg.text}</span>
+      {showVideoChat && (
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+          <video ref={localVideoRef} autoPlay muted width="200" />
+          <video ref={remoteVideoRef} autoPlay width="200" />
+        </div>
+      )}
+
+      {!showVideoChat && (
+        <>
+          <div style={{ border: '1px solid gray', height: 300, overflowY: 'auto', padding: 10, marginTop: 10, background: '#f9f9f9', whiteSpace: 'pre-wrap' }}>
+            {messages.map((msg, idx) => (
+              <div key={idx} style={{ textAlign: msg.sender === 'you' ? 'right' : 'left', marginBottom: 5 }}>
+                <span style={{ display: 'inline-block', background: msg.sender === 'you' ? '#dcf8c6' : '#fff', padding: 8, borderRadius: 10, maxWidth: '70%', wordWrap: 'break-word', border: '1px solid #ccc' }}>{msg.text}</span>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
 
-      <form onSubmit={sendMessage} style={{ display: 'flex', gap: 10 }}>
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder={paired ? "Say something..." : "Waiting to be paired..."}
-          disabled={!paired}
-          style={{ flex: 1, padding: 10 }}
-          autoComplete="off"
-        />
-        <button type="submit" disabled={!paired} style={{ padding: '10px 20px' }}>Send</button>
-      </form>
+          <form onSubmit={sendMessage} style={{ display: 'flex', gap: 10 }}>
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={paired ? "Say something..." : "Waiting to be paired..."}
+              disabled={!paired}
+              style={{ flex: 1, padding: 10 }}
+              autoComplete="off"
+            />
+            <button type="submit" disabled={!paired} style={{ padding: '10px 20px' }}>Send</button>
+          </form>
+        </>
+      )}
 
       <button onClick={findNewPartner} style={{ marginTop: 10, padding: '10px 20px', width: '100%' }}>Find New Partner</button>
 
@@ -203,4 +209,5 @@ function App() {
 }
 
 export default App;
+
 
