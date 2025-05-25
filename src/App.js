@@ -1,43 +1,63 @@
+// Updated App.js with video chat and YouTube sync support
+
 import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-
-// Connect to backend socket.io server - update with your backend IP and port
+import SimplePeer from 'simple-peer';
 
 const socket = io('https://chat-backend-k6v0.onrender.com', {
   transports: ['websocket'],
-  secure: true
+  secure: true,
 });
-
 
 function App() {
   const [status, setStatus] = useState('Connecting...');
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [paired, setPaired] = useState(false);
+  const [stream, setStream] = useState(null);
+  const [peer, setPeer] = useState(null);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [player, setPlayer] = useState(null);
   const messagesEndRef = useRef(null);
+  const localVideoRef = useRef();
+  const remoteVideoRef = useRef();
 
-  // Scroll chat to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
-    // Socket event listeners
     socket.on('connect', () => {
-      console.log('Connected to server:', socket.id);
       setStatus('Connected. Waiting to be paired...');
     });
 
     socket.on('waiting', () => {
       setStatus('Waiting for a partner...');
       setPaired(false);
-      setMessages([]); // Clear old messages
+      setMessages([]);
     });
 
-    socket.on('paired', () => {
+    socket.on('paired', async () => {
       setStatus('You are now chatting with a stranger.');
       setPaired(true);
-      setMessages([]); // Clear old messages on new pairing
+      setMessages([]);
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setStream(stream);
+      localVideoRef.current.srcObject = stream;
+
+      const newPeer = new SimplePeer({ initiator: true, trickle: false, stream });
+
+      newPeer.on('signal', data => socket.emit('webrtc-signal', data));
+      newPeer.on('stream', remoteStream => {
+        remoteVideoRef.current.srcObject = remoteStream;
+      });
+
+      setPeer(newPeer);
+    });
+
+    socket.on('webrtc-signal', signal => {
+      if (peer) peer.signal(signal);
     });
 
     socket.on('partner left', () => {
@@ -49,16 +69,21 @@ function App() {
       setMessages((prev) => [...prev, msg]);
     });
 
-    socket.on('disconnect', (reason) => {
-      console.log('Disconnected:', reason);
+    socket.on('disconnect', () => {
       setStatus('Disconnected from server.');
       setPaired(false);
     });
 
-    socket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
+    socket.on('connect_error', () => {
       setStatus('Connection error. Check server.');
     });
+
+    socket.on('youtube-url', (videoId) => {
+      if (player) player.loadVideoById(videoId);
+    });
+
+    socket.on('youtube-play', () => player?.playVideo());
+    socket.on('youtube-pause', () => player?.pauseVideo());
 
     return () => {
       socket.off('connect');
@@ -68,26 +93,46 @@ function App() {
       socket.off('chat message');
       socket.off('disconnect');
       socket.off('connect_error');
+      socket.off('webrtc-signal');
+      socket.off('youtube-url');
+      socket.off('youtube-play');
+      socket.off('youtube-pause');
     };
+  }, [peer, player]);
+
+  useEffect(() => {
+    window.onYouTubeIframeAPIReady = () => {
+      const newPlayer = new window.YT.Player('player', {
+        height: '360', width: '640',
+        events: {
+          onReady: (event) => setPlayer(event.target),
+          onStateChange: (event) => {
+            if (event.data === 1) socket.emit('youtube-play');
+            if (event.data === 2) socket.emit('youtube-pause');
+          }
+        }
+      });
+    };
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.body.appendChild(tag);
+    }
   }, []);
 
-  // Send message to backend
   const sendMessage = (e) => {
     e.preventDefault();
     if (message.trim() && paired) {
-      socket.emit('chat message', message);
+      socket.emit('chat message', { sender: 'you', text: message });
+      setMessages(prev => [...prev, { sender: 'you', text: message }]);
       setMessage('');
     }
   };
 
-  // Find new partner (disconnect current, wait for next)
   const findNewPartner = () => {
     if (paired) {
-      // Tell backend to disconnect current partner (simulate by disconnecting socket then reconnect)
       socket.disconnect();
-      setTimeout(() => {
-        socket.connect();
-      }, 100);
+      setTimeout(() => socket.connect(), 100);
       setStatus('Reconnecting and looking for a new partner...');
       setPaired(false);
       setMessages([]);
@@ -96,43 +141,26 @@ function App() {
     }
   };
 
+  const extractVideoId = (url) => {
+    const regExp = /^.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return match && match[1].length === 11 ? match[1] : null;
+  };
+
   return (
-    <div style={{ maxWidth: '600px', margin: 'auto', padding: 20 }}>
-      <h2>🌐 Random Chat</h2>
+    <div style={{ maxWidth: '800px', margin: 'auto', padding: 20 }}>
+      <h2>🌐 Random Chat + Video + YouTube</h2>
       <p><b>Status:</b> {status}</p>
 
-      <div
-        style={{
-          border: '1px solid gray',
-          height: 300,
-          overflowY: 'auto',
-          padding: 10,
-          marginBottom: 10,
-          background: '#f9f9f9',
-          whiteSpace: 'pre-wrap'
-        }}
-      >
+      <div style={{ display: 'flex', gap: 10 }}>
+        <video ref={localVideoRef} autoPlay muted width="200" />
+        <video ref={remoteVideoRef} autoPlay width="200" />
+      </div>
+
+      <div style={{ border: '1px solid gray', height: 300, overflowY: 'auto', padding: 10, marginTop: 10, background: '#f9f9f9', whiteSpace: 'pre-wrap' }}>
         {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            style={{
-              textAlign: msg.sender === 'you' ? 'right' : 'left',
-              marginBottom: 5,
-            }}
-          >
-            <span
-              style={{
-                display: 'inline-block',
-                background: msg.sender === 'you' ? '#dcf8c6' : '#fff',
-                padding: 8,
-                borderRadius: 10,
-                maxWidth: '70%',
-                wordWrap: 'break-word',
-                border: '1px solid #ccc',
-              }}
-            >
-              {msg.text}
-            </span>
+          <div key={idx} style={{ textAlign: msg.sender === 'you' ? 'right' : 'left', marginBottom: 5 }}>
+            <span style={{ display: 'inline-block', background: msg.sender === 'you' ? '#dcf8c6' : '#fff', padding: 8, borderRadius: 10, maxWidth: '70%', wordWrap: 'break-word', border: '1px solid #ccc' }}>{msg.text}</span>
           </div>
         ))}
         <div ref={messagesEndRef} />
@@ -148,19 +176,31 @@ function App() {
           style={{ flex: 1, padding: 10 }}
           autoComplete="off"
         />
-        <button type="submit" disabled={!paired} style={{ padding: '10px 20px' }}>
-          Send
-        </button>
+        <button type="submit" disabled={!paired} style={{ padding: '10px 20px' }}>Send</button>
       </form>
 
-      <button
-        onClick={findNewPartner}
-        style={{ marginTop: 10, padding: '10px 20px', width: '100%' }}
-      >
-        Find New Partner
-      </button>
+      <button onClick={findNewPartner} style={{ marginTop: 10, padding: '10px 20px', width: '100%' }}>Find New Partner</button>
+
+      <div style={{ marginTop: 20 }}>
+        <input
+          placeholder="Paste YouTube URL"
+          value={youtubeUrl}
+          onChange={(e) => setYoutubeUrl(e.target.value)}
+          style={{ width: '100%', padding: 8 }}
+        />
+        <button onClick={() => {
+          const videoId = extractVideoId(youtubeUrl);
+          if (videoId && player) {
+            player.loadVideoById(videoId);
+            socket.emit('youtube-url', videoId);
+          }
+        }} style={{ marginTop: 10, width: '100%', padding: 10 }}>Watch Together</button>
+
+        <div id="player" style={{ marginTop: 20 }}></div>
+      </div>
     </div>
   );
 }
 
 export default App;
+
