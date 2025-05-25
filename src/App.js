@@ -23,8 +23,10 @@ function App() {
   const remoteVideoRef = useRef();
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!showVideoChat && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, showVideoChat]);
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -57,7 +59,9 @@ function App() {
     });
 
     socket.on('chat message', (msg) => {
-      setMessages(prev => [...prev, msg]);
+      if (typeof msg === 'object' && msg.text && msg.sender) {
+        setMessages(prev => [...prev, msg]);
+      }
     });
 
     socket.on('disconnect', () => {
@@ -138,14 +142,13 @@ function App() {
   };
 
   const findNewPartner = () => {
-    socket.disconnect();
-    setTimeout(() => {
-      socket.connect();
-      setStatus('Reconnecting...');
-      setMessages([]);
-      setPaired(false);
-      setShowVideoChat(false);
-    }, 100);
+    socket.emit('find-new-partner');
+    setStatus('Searching for a new partner...');
+    setMessages([]);
+    setPaired(false);
+    setShowVideoChat(false);
+    peerRef.current?.destroy();
+    peerRef.current = null;
   };
 
   const extractVideoId = (url) => {
@@ -214,7 +217,7 @@ function App() {
         />
         <button onClick={() => {
           const videoId = extractVideoId(youtubeUrl);
-          if (videoId && player) {
+          if (videoId && player && socket.connected) {
             player.loadVideoById(videoId);
             socket.emit('youtube-url', videoId);
           }
@@ -227,4 +230,3 @@ function App() {
 }
 
 export default App;
-
