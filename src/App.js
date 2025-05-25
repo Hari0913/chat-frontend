@@ -7,6 +7,7 @@ const socket = io('https://chat-backend-k6v0.onrender.com', {
   secure: true,
 });
 
+
 function App() {
   const [status, setStatus] = useState('Connecting...');
   const [message, setMessage] = useState('');
