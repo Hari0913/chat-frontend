@@ -4,30 +4,62 @@ import { io } from 'socket.io-client';
 
 const socket = io('https://chat-backend-k6v0.onrender.com', {
   transports: ['websocket'],
-  secure: true,
+  timeout: 10000,
+  reconnectionAttempts: 5
 });
-
 
 function App() {
   const [status, setStatus] = useState('Connecting...');
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [paired, setPaired] = useState(false);
-  const [stream, setStream] = useState(null);
   const [showVideoChat, setShowVideoChat] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [player, setPlayer] = useState(null);
 
   const peerRef = useRef(null);
-  const messagesEndRef = useRef(null);
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
+  const messagesEndRef = useRef();
 
-  useEffect(() => {
-    if (!showVideoChat && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  const cleanupPeer = () => {
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
     }
-  }, [messages, showVideoChat]);
+    const tracks = localVideoRef.current?.srcObject?.getTracks();
+    tracks?.forEach(track => track.stop());
+    localVideoRef.current.srcObject = null;
+    remoteVideoRef.current.srcObject = null;
+  };
+
+  const createPeer = async (initiator) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideoRef.current.srcObject = stream;
+
+      const peer = new SimplePeer({
+        initiator,
+        trickle: false,
+        stream
+      });
+
+      peer.on('signal', signal => {
+        socket.emit('webrtc-signal', signal);
+      });
+
+      peer.on('stream', remoteStream => {
+        remoteVideoRef.current.srcObject = remoteStream;
+      });
+
+      peer.on('error', err => console.error('Peer error:', err));
+
+      peerRef.current = peer;
+      setShowVideoChat(true);
+    } catch (err) {
+      alert("Could not access camera/mic.");
+    }
+  };
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -40,38 +72,29 @@ function App() {
       setMessages([]);
     });
 
-    socket.on('paired', () => {
+    socket.on('paired', ({ initiator }) => {
       setStatus('You are now chatting with a stranger.');
       setPaired(true);
       setMessages([]);
+      if (initiator) createPeer(true);
     });
 
     socket.on('webrtc-signal', signal => {
-      if (peerRef.current) {
-        peerRef.current.signal(signal);
-      }
+      if (!peerRef.current) createPeer(false);
+      peerRef.current?.signal(signal);
     });
 
     socket.on('partner left', () => {
       setStatus('Stranger disconnected. Click "Find New Partner" to connect again.');
       setPaired(false);
-      peerRef.current?.destroy();
-      peerRef.current = null;
+      setShowVideoChat(false);
+      cleanupPeer();
     });
 
-    socket.on('chat message', (msg) => {
-      if (typeof msg === 'object' && msg.text && msg.sender) {
+    socket.on('chat message', msg => {
+      if (msg?.text && msg?.sender) {
         setMessages(prev => [...prev, msg]);
       }
-    });
-
-    socket.on('disconnect', () => {
-      setStatus('Disconnected from server.');
-      setPaired(false);
-    });
-
-    socket.on('connect_error', () => {
-      setStatus('Connection error. Check server.');
     });
 
     socket.on('youtube-url', (videoId) => {
@@ -80,6 +103,15 @@ function App() {
 
     socket.on('youtube-play', () => player?.playVideo());
     socket.on('youtube-pause', () => player?.pauseVideo());
+
+    socket.on('disconnect', () => {
+      setStatus('Disconnected from server.');
+      cleanupPeer();
+    });
+
+    socket.on('connect_error', () => {
+      setStatus('Connection error. Trying again...');
+    });
 
     return () => {
       socket.disconnect();
@@ -92,45 +124,21 @@ function App() {
         height: '360',
         width: '640',
         events: {
-          onReady: (event) => setPlayer(event.target),
-          onStateChange: (event) => {
+          onReady: event => setPlayer(event.target),
+          onStateChange: event => {
             if (event.data === 1) socket.emit('youtube-play');
             if (event.data === 2) socket.emit('youtube-pause');
           }
         }
       });
     };
+
     if (!window.YT) {
       const tag = document.createElement('script');
       tag.src = "https://www.youtube.com/iframe_api";
       document.body.appendChild(tag);
     }
   }, []);
-
-  const startVideoChat = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setStream(mediaStream);
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = mediaStream;
-      }
-
-      const newPeer = new SimplePeer({ initiator: true, trickle: false, stream: mediaStream });
-
-      newPeer.on('signal', data => socket.emit('webrtc-signal', data));
-
-      newPeer.on('stream', remoteStream => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-        }
-      });
-
-      peerRef.current = newPeer;
-      setShowVideoChat(true);
-    } catch (err) {
-      alert("Unable to access camera/microphone");
-    }
-  };
 
   const sendMessage = (e) => {
     e.preventDefault();
@@ -148,8 +156,7 @@ function App() {
     setMessages([]);
     setPaired(false);
     setShowVideoChat(false);
-    peerRef.current?.destroy();
-    peerRef.current = null;
+    cleanupPeer();
   };
 
   const extractVideoId = (url) => {
@@ -205,7 +212,7 @@ function App() {
       <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
         <button onClick={findNewPartner} style={{ flex: 1, padding: 10 }}>Find New Partner</button>
         {paired && !showVideoChat && (
-          <button onClick={startVideoChat} style={{ flex: 1, padding: 10 }}>Start Video Chat</button>
+          <button onClick={() => createPeer(true)} style={{ flex: 1, padding: 10 }}>Start Video Chat</button>
         )}
       </div>
 
