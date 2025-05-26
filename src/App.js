@@ -5,7 +5,7 @@ import io from 'socket.io-client';
 
 const socket = io('https://chat-backend-5d2r.onrender.com');
 
-export default function ChatApp() {
+export default function App() {
   const [stream, setStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [peer, setPeer] = useState(null);
@@ -18,6 +18,7 @@ export default function ChatApp() {
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
   const chatBoxRef = useRef();
+  const ytRef = useRef();
 
   useEffect(() => {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
@@ -33,9 +34,7 @@ export default function ChatApp() {
 
     socket.on('waiting', () => setStatus('Waiting for partner...'));
 
-    socket.on('chat message', data => {
-      setMessages(prev => [...prev, data]);
-    });
+    socket.on('chat message', data => setMessages(prev => [...prev, data]));
 
     socket.on('partner left', () => {
       setStatus('Partner disconnected');
@@ -88,50 +87,78 @@ export default function ChatApp() {
 
   const toggleTheme = () => setMode(prev => (prev === 'dark' ? 'light' : 'dark'));
 
-  const ytRef = useRef();
+  const colors = {
+    dark: {
+      background: '#1e1e2f',
+      text: '#f0f0f0',
+      chatBg: '#2e2e3e',
+      bubble: '#444',
+      inputBg: '#333',
+      border: '#555',
+      buttonBg: '#4a90e2',
+      buttonText: '#fff'
+    },
+    light: {
+      background: '#f0f0f0',
+      text: '#222',
+      chatBg: '#fff',
+      bubble: '#ddd',
+      inputBg: '#fff',
+      border: '#ccc',
+      buttonBg: '#007bff',
+      buttonText: '#fff'
+    }
+  };
+
+  const theme = colors[mode];
 
   return (
-    <div className={`min-h-screen flex flex-col transition bg-${mode === 'dark' ? 'gray-900' : 'gray-100'} text-${mode === 'dark' ? 'white' : 'black'}`}>
-      <div className="flex justify-between items-center p-4 border-b">
-        <h1 className="text-xl font-bold">Random Chat</h1>
-        <div className="flex gap-2">
-          <button className="px-2 py-1 rounded bg-blue-500 text-white" onClick={toggleTheme}>Toggle {mode} mode</button>
-          <button className="px-2 py-1 rounded bg-green-500 text-white" onClick={handleYoutubeShare}>Share YouTube</button>
+    <div style={{ backgroundColor: theme.background, color: theme.text, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <header style={{ padding: '10px 20px', borderBottom: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1>Random Chat</h1>
+        <div>
+          <button onClick={toggleTheme} style={{ marginRight: '10px', backgroundColor: theme.buttonBg, color: theme.buttonText, border: 'none', padding: '8px 12px', borderRadius: '5px' }}>Toggle {mode} mode</button>
+          <button onClick={handleYoutubeShare} style={{ backgroundColor: theme.buttonBg, color: theme.buttonText, border: 'none', padding: '8px 12px', borderRadius: '5px' }}>Share YouTube</button>
         </div>
-      </div>
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-1/2 flex flex-col border-r p-2 space-y-2">
-          <video ref={localVideoRef} autoPlay muted className="rounded shadow-md w-full h-1/2 object-cover" />
-          <video ref={remoteVideoRef} autoPlay className="rounded shadow-md w-full h-1/2 object-cover" />
+      </header>
+
+      <main style={{ flex: 1, display: 'flex' }}>
+        <div style={{ width: '50%', padding: '10px', borderRight: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <video ref={localVideoRef} autoPlay muted style={{ width: '100%', height: '50%', borderRadius: '10px', backgroundColor: '#000' }} />
+          <video ref={remoteVideoRef} autoPlay style={{ width: '100%', height: '50%', borderRadius: '10px', backgroundColor: '#000' }} />
         </div>
-        <div className="w-1/2 flex flex-col p-2 space-y-2">
+
+        <div style={{ width: '50%', padding: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {videoId && (
             <YouTube
               videoId={videoId}
               opts={{ width: '100%', height: '250' }}
               onReady={e => (ytRef.current = e)}
-              className="rounded shadow-md"
             />
           )}
-          <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-800 p-2 rounded shadow-inner" ref={chatBoxRef}>
+
+          <div ref={chatBoxRef} style={{ flex: 1, overflowY: 'auto', backgroundColor: theme.chatBg, padding: '10px', borderRadius: '8px' }}>
             {messages.map((msg, i) => (
-              <div key={i} className={`mb-1 ${msg.sender === 'you' ? 'text-right' : 'text-left'}`}>
-                <span className="inline-block px-3 py-1 rounded bg-gray-300 dark:bg-gray-700">{msg.text}</span>
+              <div key={i} style={{ textAlign: msg.sender === 'you' ? 'right' : 'left', marginBottom: '5px' }}>
+                <span style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: theme.bubble, borderRadius: '15px' }}>{msg.text}</span>
               </div>
             ))}
           </div>
-          <div className="flex">
+
+          <div style={{ display: 'flex' }}>
             <input
-              className="flex-1 p-2 border rounded-l dark:bg-gray-700 dark:text-white"
               value={message}
               onChange={e => setMessage(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              placeholder="Type your message..."
+              style={{ flex: 1, padding: '10px', backgroundColor: theme.inputBg, color: theme.text, border: `1px solid ${theme.border}`, borderTopLeftRadius: '5px', borderBottomLeftRadius: '5px' }}
             />
-            <button onClick={sendMessage} className="px-4 bg-blue-600 text-white rounded-r">Send</button>
+            <button onClick={sendMessage} style={{ padding: '10px 15px', border: `1px solid ${theme.border}`, borderLeft: 'none', borderTopRightRadius: '5px', borderBottomRightRadius: '5px', backgroundColor: theme.buttonBg, color: theme.buttonText }}>Send</button>
           </div>
-          <p className="text-sm text-center text-gray-400 mt-1">{status}</p>
+
+          <p style={{ textAlign: 'center', fontSize: '0.9em', color: theme.border }}>{status}</p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
