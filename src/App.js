@@ -28,7 +28,7 @@ function App() {
     socket.on('waiting', () => setConnected(false));
 
     socket.on('chat message', ({ sender, text }) => {
-      setMessages(prev => [...prev, { sender, text }]);
+      setMessages(prev => [...prev, { sender, text, fromMe: false }]);
     });
 
     socket.on('youtube-url', id => {
@@ -89,6 +89,7 @@ function App() {
   const sendMessage = () => {
     if (message.trim() && connected) {
       socket.emit('chat message', { sender: me, text: message });
+      setMessages(prev => [...prev, { sender: me, text: message, fromMe: true }]);
       setMessage('');
     }
   };
@@ -180,10 +181,10 @@ function App() {
               messages.map((msg, index) => (
                 <div
                   key={index}
-                  className={`chat-message ${msg.sender === me ? 'me' : 'stranger'}`}
+                  className={`chat-message ${msg.fromMe ? 'me' : 'stranger'}`}
                 >
                   <div className="bubble">
-                    <div className="sender">{msg.sender === me ? 'Me' : 'Stranger'}</div>
+                    <div className="sender">{msg.fromMe ? 'Me' : 'Stranger'}</div>
                     <div className="text">{msg.text}</div>
                   </div>
                 </div>
