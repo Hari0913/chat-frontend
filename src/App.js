@@ -20,6 +20,7 @@ function App() {
   const [youtubeLink, setYoutubeLink] = useState('');
   const [sharedYoutubeLink, setSharedYoutubeLink] = useState('');
   const [mode, setMode] = useState('light');
+  const [connected, setConnected] = useState(false);
 
   const myVideo = useRef();
   const userVideo = useRef();
@@ -27,7 +28,10 @@ function App() {
 
   useEffect(() => {
     socket.on('me', id => setMe(id));
-    socket.on('partner-found', ({ partnerId }) => setPartnerSocket(partnerId));
+    socket.on('partner-found', ({ partnerId }) => {
+      setPartnerSocket(partnerId);
+      setConnected(true);
+    });
     socket.on('callUser', data => {
       setReceivingCall(true);
       setCaller(data.from);
@@ -81,12 +85,13 @@ function App() {
 
   const leaveCall = () => {
     setCallEnded(true);
+    setCallAccepted(false);
     if (connectionRef.current) connectionRef.current.destroy();
-    window.location.reload();
+    setStream(null);
   };
 
   const sendMessage = () => {
-    if (message && partnerSocket) {
+    if (message.trim() && partnerSocket) {
       socket.emit('message', { to: partnerSocket, sender: me, text: message });
       setMessages(prev => [...prev, { sender: 'Me', text: message }]);
       setMessage('');
@@ -114,7 +119,10 @@ function App() {
   return (
     <div className={`app ${mode}`}>
       <div className="header">
-        <h1>🎲 Random Chat</h1>
+        <div className="top-bar">
+          <h1 className="logo">🎲 Random Chat</h1>
+          <span className={`status ${connected ? 'online' : 'offline'}`}>{connected ? 'Connected' : 'Waiting...'}</span>
+        </div>
         <div className="top-buttons">
           <button onClick={toggleTheme}>{mode === 'light' ? <FaMoon /> : <FaSun />}</button>
           <input
@@ -128,14 +136,13 @@ function App() {
       </div>
 
       <div className="main">
-        <div className={`video-section ${callAccepted && !callEnded ? 'active' : ''}`}>
-          {callAccepted && !callEnded && (
-            <>
-              <video playsInline muted ref={myVideo} autoPlay className="video" />
-              <video playsInline ref={userVideo} autoPlay className="video" />
-            </>
-          )}
-        </div>
+        {callAccepted && !callEnded && (
+          <div className="video-section">
+            <video playsInline muted ref={myVideo} autoPlay className="video" />
+            <video playsInline ref={userVideo} autoPlay className="video" />
+            <button className="end-call-button" onClick={leaveCall}>End Call</button>
+          </div>
+        )}
 
         <div className="chat-section">
           {sharedYoutubeLink && (
@@ -173,7 +180,9 @@ function App() {
 
           <div className="bottom-controls">
             <button onClick={() => window.location.reload()}>Find New Partner</button>
-            <button onClick={startVideoChat}>Start Video Chat</button>
+            {!callAccepted && !callEnded && (
+              <button onClick={startVideoChat}>Start Video Chat</button>
+            )}
           </div>
         </div>
       </div>
