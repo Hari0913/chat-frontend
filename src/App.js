@@ -1,161 +1,182 @@
 import { useEffect, useRef, useState } from 'react';
-import YouTube from 'react-youtube';
+import { FaMoon, FaSun, FaYoutube } from 'react-icons/fa';
 import SimplePeer from 'simple-peer';
 import io from 'socket.io-client';
 import './App.css';
 
-const socket = io('https://chat-backend-k6v0.onrender.com');
+const socket = io('https://chat-frontend-hheb.onrender.com');
 
-export default function App() {
+function App() {
+  const [me, setMe] = useState('');
   const [stream, setStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
-  const [peer, setPeer] = useState(null);
+  const [receivingCall, setReceivingCall] = useState(false);
+  const [caller, setCaller] = useState('');
+  const [callerSignal, setCallerSignal] = useState();
+  const [callAccepted, setCallAccepted] = useState(false);
+  const [callEnded, setCallEnded] = useState(false);
+  const [partnerSocket, setPartnerSocket] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
-  const [status, setStatus] = useState('Connecting...');
-  const [videoId, setVideoId] = useState('');
-  const [mode, setMode] = useState('dark');
-  const [videoStarted, setVideoStarted] = useState(false);
+  const [youtubeLink, setYoutubeLink] = useState('');
+  const [sharedYoutubeLink, setSharedYoutubeLink] = useState('');
+  const [mode, setMode] = useState('light');
 
-  const localVideoRef = useRef();
-  const remoteVideoRef = useRef();
-  const chatBoxRef = useRef();
-  const ytRef = useRef();
+  const myVideo = useRef();
+  const userVideo = useRef();
+  const connectionRef = useRef();
 
   useEffect(() => {
-    if (videoStarted) {
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
-        setStream(localStream);
-        if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
+    socket.on('me', id => setMe(id));
+    socket.on('partner-found', ({ partnerId }) => setPartnerSocket(partnerId));
+    socket.on('callUser', data => {
+      setReceivingCall(true);
+      setCaller(data.from);
+      setCallerSignal(data.signal);
+    });
+    socket.on('message', ({ sender, text }) => {
+      setMessages(prev => [...prev, { sender, text }]);
+    });
+    socket.on('shareYoutube', link => {
+      setSharedYoutubeLink(link);
+    });
+  }, []);
+
+  const callUser = () => {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
+      setStream(localStream);
+      if (myVideo.current) myVideo.current.srcObject = localStream;
+
+      const peer = new SimplePeer({ initiator: true, trickle: false, stream: localStream });
+      peer.on('signal', data => {
+        socket.emit('callUser', { userToCall: partnerSocket, signalData: data, from: me });
       });
-    }
-  }, [videoStarted]);
-
-  useEffect(() => {
-    socket.on('paired', () => {
-      setStatus('Connected!');
-      if (stream) {
-        const newPeer = new SimplePeer({ initiator: true, trickle: false, stream });
-        setupPeer(newPeer);
-      }
+      peer.on('stream', currentStream => {
+        if (userVideo.current) userVideo.current.srcObject = currentStream;
+      });
+      socket.on('callAccepted', signal => {
+        setCallAccepted(true);
+        peer.signal(signal);
+      });
+      connectionRef.current = peer;
     });
+  };
 
-    socket.on('waiting', () => setStatus('Waiting for partner...'));
+  const answerCall = () => {
+    setCallAccepted(true);
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
+      setStream(localStream);
+      if (myVideo.current) myVideo.current.srcObject = localStream;
 
-    socket.on('chat message', data => setMessages(prev => [...prev, data]));
-
-    socket.on('partner left', () => {
-      setStatus('Partner disconnected');
-      setPeer(null);
-      setRemoteStream(null);
+      const peer = new SimplePeer({ initiator: false, trickle: false, stream: localStream });
+      peer.on('signal', data => {
+        socket.emit('answerCall', { signal: data, to: caller });
+      });
+      peer.on('stream', currentStream => {
+        if (userVideo.current) userVideo.current.srcObject = currentStream;
+      });
+      peer.signal(callerSignal);
+      connectionRef.current = peer;
     });
+  };
 
-    socket.on('webrtc-signal', data => {
-      if (!peer && stream) {
-        const newPeer = new SimplePeer({ initiator: false, trickle: false, stream });
-        setupPeer(newPeer);
-        newPeer.signal(data);
-      } else if (peer) {
-        peer.signal(data);
-      }
-    });
-
-    socket.on('youtube-url', id => setVideoId(id));
-    socket.on('youtube-play', () => ytRef.current?.internalPlayer.playVideo());
-    socket.on('youtube-pause', () => ytRef.current?.internalPlayer.pauseVideo());
-
-    return () => socket.disconnect();
-  }, [stream]);
-
-  const setupPeer = p => {
-    p.on('signal', data => socket.emit('webrtc-signal', data));
-    p.on('stream', remote => {
-      setRemoteStream(remote);
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
-    });
-    setPeer(p);
+  const leaveCall = () => {
+    setCallEnded(true);
+    if (connectionRef.current) connectionRef.current.destroy();
+    window.location.reload();
   };
 
   const sendMessage = () => {
-    if (message.trim()) {
-      const msg = { sender: 'you', text: message };
-      setMessages(prev => [...prev, msg]);
-      socket.emit('chat message', msg);
+    if (message && partnerSocket) {
+      socket.emit('message', { to: partnerSocket, sender: me, text: message });
+      setMessages(prev => [...prev, { sender: 'Me', text: message }]);
       setMessage('');
     }
   };
 
-  const handleYoutubeShare = () => {
-    const id = prompt('Enter YouTube video ID (not full URL)');
-    if (id) {
-      setVideoId(id);
-      socket.emit('youtube-url', id);
+  const toggleTheme = () => {
+    setMode(prev => (prev === 'light' ? 'dark' : 'light'));
+  };
+
+  const shareYoutube = () => {
+    if (youtubeLink && partnerSocket) {
+      socket.emit('shareYoutube', { to: partnerSocket, link: youtubeLink });
+      setSharedYoutubeLink(youtubeLink);
+      setYoutubeLink('');
     }
   };
 
-  const toggleTheme = () => setMode(prev => (prev === 'dark' ? 'light' : 'dark'));
-
   const startVideoChat = () => {
-    const confirm = window.confirm('By clicking on video chat, you will reveal your face. Proceed?');
-    if (confirm) setVideoStarted(true);
-  };
-
-  const findNewPartner = () => {
-    socket.disconnect();
-    window.location.reload();
+    if (window.confirm('By clicking OK, you will reveal your face to a random stranger. Proceed?')) {
+      callUser();
+    }
   };
 
   return (
     <div className={`app ${mode}`}>
-      <header>
-        <h1>🎥 Random Chat</h1>
-        <div>
-          <button onClick={toggleTheme} title="Toggle Theme">{mode === 'dark' ? '🌙' : '☀️'}</button>
-          <button onClick={handleYoutubeShare}>📺 Share YouTube</button>
+      <div className="header">
+        <h1>🎲 Random Chat</h1>
+        <div className="top-buttons">
+          <button onClick={toggleTheme}>{mode === 'light' ? <FaMoon /> : <FaSun />}</button>
+          <input
+            type="text"
+            placeholder="Paste YouTube link"
+            value={youtubeLink}
+            onChange={e => setYoutubeLink(e.target.value)}
+          />
+          <button onClick={shareYoutube}><FaYoutube /></button>
         </div>
-      </header>
+      </div>
 
-      <main>
-        <div className="video-section">
-          {videoStarted && <video ref={localVideoRef} autoPlay muted />}
-          {videoStarted && <video ref={remoteVideoRef} autoPlay />}
-        </div>
+      <div className="main">
+        {callAccepted && !callEnded && (
+          <div className="video-section">
+            <video playsInline muted ref={myVideo} autoPlay className="video" />
+            <video playsInline ref={userVideo} autoPlay className="video" />
+          </div>
+        )}
 
         <div className="chat-section">
-          {videoId && (
-            <YouTube
-              videoId={videoId}
-              opts={{ width: '100%', height: '200' }}
-              onReady={e => (ytRef.current = e)}
-            />
+          {sharedYoutubeLink && (
+            <div className="youtube">
+              <iframe
+                width="100%"
+                height="250"
+                src={`https://www.youtube.com/embed/${sharedYoutubeLink.split('v=')[1]}`}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title="YouTube video"
+              ></iframe>
+            </div>
           )}
 
-          <div className="chat-box" ref={chatBoxRef}>
-            {messages.map((msg, i) => (
-              <div key={i} className={msg.sender === 'you' ? 'msg you' : 'msg other'}>
-                {msg.text}
+          <div className="chat-box">
+            {messages.map((msg, index) => (
+              <div key={index} className="chat-message">
+                <strong>{msg.sender}:</strong> {msg.text}
               </div>
             ))}
           </div>
 
-          <div className="chat-input">
+          <div className="input-row">
             <input
+              type="text"
+              placeholder="Type your message"
               value={message}
               onChange={e => setMessage(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMessage()}
-              placeholder="Type here..."
             />
             <button onClick={sendMessage}>Send</button>
           </div>
 
-          <div className="bottom-buttons">
-            <button onClick={findNewPartner}>🔄 Find New Partner</button>
-            <button onClick={startVideoChat}>🎥 Video Chat</button>
+          <div className="bottom-controls">
+            <button onClick={() => window.location.reload()}>Find New Partner</button>
+            <button onClick={startVideoChat}>Start Video Chat</button>
           </div>
-
-          <p className="status">{status}</p>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
+
+export default App;

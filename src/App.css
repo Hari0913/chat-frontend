@@ -241,3 +241,150 @@ button {
   border-radius: 5px;
 }
 
+
+/* App.css */
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.3s;
+}
+
+.app.light {
+  background-color: #f0f0f0;
+  color: #000;
+}
+
+.app.dark {
+  background-color: #121212;
+  color: #fff;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #6200ea;
+  color: white;
+}
+
+.buttons button {
+  background: none;
+  border: none;
+  color: white;
+  margin-left: 10px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+}
+
+.video-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  display: none;
+}
+
+.video-section.active {
+  display: flex;
+}
+
+.video {
+  width: 90%;
+  max-height: 40vh;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  background-color: black;
+}
+
+.chat-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  width: 100%;
+}
+
+.youtube {
+  height: 200px;
+  margin-bottom: 10px;
+}
+
+.chat-box {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  background: rgba(0,0,0,0.05);
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.chat-message {
+  margin-bottom: 5px;
+}
+
+.input-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.input-row input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.input-row button {
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+  background-color: #6200ea;
+  color: white;
+  cursor: pointer;
+}
+
+.bottom-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bottom-controls button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+  background-color: #03dac6;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .main {
+    flex-direction: column;
+  }
+  .video {
+    max-width: 100%;
+    max-height: 30vh;
+  }
+}
+
