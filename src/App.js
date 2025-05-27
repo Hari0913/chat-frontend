@@ -28,7 +28,7 @@ function App() {
     socket.on('waiting', () => setConnected(false));
 
     socket.on('chat message', ({ sender, text }) => {
-      setMessages(prev => [...prev, { sender: sender === 'stranger' ? 'Stranger' : 'Me', text }]);
+      setMessages(prev => [...prev, { sender, text }]);
     });
 
     socket.on('youtube-url', id => {
@@ -88,8 +88,7 @@ function App() {
 
   const sendMessage = () => {
     if (message && connected) {
-      socket.emit('chat message', message);
-      setMessages(prev => [...prev, { sender: 'Me', text: message }]);
+      socket.emit('chat message', { sender: me, text: message });
       setMessage('');
     }
   };
@@ -108,14 +107,14 @@ function App() {
     }
   };
 
-  useEffect(() => {
+  const shareYoutubeVideo = () => {
     const id = extractYouTubeId(youtubeLink);
     if (id && connected) {
       socket.emit('youtube-url', id);
       setSharedYoutubeLink(id);
       setYoutubeLink('');
     }
-  }, [youtubeLink]);
+  };
 
   const startVideoChat = () => {
     if (window.confirm('By clicking OK, you will reveal your face to a random stranger. Proceed?')) {
@@ -144,7 +143,7 @@ function App() {
             value={youtubeLink}
             onChange={e => setYoutubeLink(e.target.value)}
           />
-          <button><FaYoutube /></button>
+          <button onClick={shareYoutubeVideo}><FaYoutube /></button>
           {!callAccepted && <button onClick={startVideoChat}>Start Video Chat</button>}
           {callAccepted && <button onClick={leaveCall}>End Video Chat</button>}
           <button onClick={findNewPartner}>Find New Partner</button>
@@ -177,7 +176,7 @@ function App() {
           <div className="chat-box">
             {connected ? messages.map((msg, index) => (
               <div key={index} className="chat-message">
-                <strong>{msg.sender}:</strong> {msg.text}
+                <strong>{msg.sender === me ? 'Me' : 'Stranger'}:</strong> {msg.text}
               </div>
             )) : <div className="chat-message">Waiting for a partner...</div>}
           </div>
