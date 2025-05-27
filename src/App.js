@@ -87,8 +87,9 @@ function App() {
   };
 
   const sendMessage = () => {
-    if (message && connected) {
+    if (message.trim() && connected) {
       socket.emit('chat message', { sender: me, text: message });
+      setMessages(prev => [...prev, { sender: me, text: message }]);
       setMessage('');
     }
   };
@@ -134,7 +135,9 @@ function App() {
       <div className="header">
         <div className="top-line">
           <h1>🎲 Random Chat</h1>
-          <button onClick={toggleTheme}>{mode === 'light' ? <FaMoon /> : <FaSun />}</button>
+          <button onClick={toggleTheme}>
+            {mode === 'light' ? <FaMoon /> : <FaSun />}
+          </button>
         </div>
         <div className="top-buttons">
           <input
@@ -174,11 +177,21 @@ function App() {
           )}
 
           <div className="chat-box">
-            {connected ? messages.map((msg, index) => (
-              <div key={index} className="chat-message">
-                <strong>{msg.sender === me ? 'Me' : 'Stranger'}:</strong> {msg.text}
-              </div>
-            )) : <div className="chat-message">Waiting for a partner...</div>}
+            {connected ? (
+              messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`chat-message ${msg.sender === me ? 'me' : 'stranger'}`}
+                >
+                  <div className="bubble">
+                    <div className="sender">{msg.sender === me ? 'Me' : 'Stranger'}</div>
+                    <div className="text">{msg.text}</div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="chat-message system-message">Waiting for a partner...</div>
+            )}
           </div>
 
           <div className="input-row">
