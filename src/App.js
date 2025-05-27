@@ -28,20 +28,26 @@ function App() {
 
   useEffect(() => {
     socket.on('me', id => setMe(id));
-    socket.on('partner-found', ({ partnerId }) => {
-      setPartnerSocket(partnerId);
-      setConnected(true);
-    });
+    socket.on('paired', () => setConnected(true));
+    socket.on('waiting', () => setConnected(false));
+
     socket.on('callUser', data => {
       setReceivingCall(true);
       setCaller(data.from);
       setCallerSignal(data.signal);
     });
-    socket.on('message', ({ sender, text }) => {
-      setMessages(prev => [...prev, { sender, text }]);
+
+    socket.on('chat message', ({ sender, text }) => {
+      setMessages(prev => [...prev, { sender: sender === 'stranger' ? 'Stranger' : 'Me', text }]);
     });
-    socket.on('shareYoutube', link => {
-      setSharedYoutubeLink(link);
+
+    socket.on('youtube-url', id => {
+      setSharedYoutubeLink(id);
+    });
+
+    socket.on('partner left', () => {
+      setConnected(false);
+      leaveCall();
     });
   }, []);
 
@@ -52,12 +58,12 @@ function App() {
 
       const peer = new SimplePeer({ initiator: true, trickle: false, stream: localStream });
       peer.on('signal', data => {
-        socket.emit('callUser', { userToCall: partnerSocket, signalData: data, from: me });
+        socket.emit('webrtc-signal', data);
       });
       peer.on('stream', currentStream => {
         if (userVideo.current) userVideo.current.srcObject = currentStream;
       });
-      socket.on('callAccepted', signal => {
+      socket.on('webrtc-signal', signal => {
         setCallAccepted(true);
         peer.signal(signal);
       });
@@ -65,34 +71,16 @@ function App() {
     });
   };
 
-  const answerCall = () => {
-    setCallAccepted(true);
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
-      setStream(localStream);
-      if (myVideo.current) myVideo.current.srcObject = localStream;
-
-      const peer = new SimplePeer({ initiator: false, trickle: false, stream: localStream });
-      peer.on('signal', data => {
-        socket.emit('answerCall', { signal: data, to: caller });
-      });
-      peer.on('stream', currentStream => {
-        if (userVideo.current) userVideo.current.srcObject = currentStream;
-      });
-      peer.signal(callerSignal);
-      connectionRef.current = peer;
-    });
-  };
-
   const leaveCall = () => {
     setCallEnded(true);
-    setCallAccepted(false);
     if (connectionRef.current) connectionRef.current.destroy();
     setStream(null);
+    setCallAccepted(false);
   };
 
   const sendMessage = () => {
-    if (message.trim() && partnerSocket) {
-      socket.emit('message', { to: partnerSocket, sender: me, text: message });
+    if (message && connected) {
+      socket.emit('chat message', message);
       setMessages(prev => [...prev, { sender: 'Me', text: message }]);
       setMessage('');
     }
@@ -103,10 +91,13 @@ function App() {
   };
 
   const shareYoutube = () => {
-    if (youtubeLink && partnerSocket) {
-      socket.emit('shareYoutube', { to: partnerSocket, link: youtubeLink });
-      setSharedYoutubeLink(youtubeLink);
-      setYoutubeLink('');
+    if (youtubeLink && connected) {
+      const videoId = youtubeLink.split('v=')[1]?.split('&')[0];
+      if (videoId) {
+        socket.emit('youtube-url', videoId);
+        setSharedYoutubeLink(videoId);
+        setYoutubeLink('');
+      }
     }
   };
 
@@ -116,15 +107,21 @@ function App() {
     }
   };
 
+  const findNewPartner = () => {
+    socket.emit('find-new-partner');
+    setMessages([]);
+    setSharedYoutubeLink('');
+    leaveCall();
+  };
+
   return (
     <div className={`app ${mode}`}>
       <div className="header">
-        <div className="top-bar">
-          <h1 className="logo">🎲 Random Chat</h1>
-          <span className={`status ${connected ? 'online' : 'offline'}`}>{connected ? 'Connected' : 'Waiting...'}</span>
+        <div className="top-line">
+          <h1>🎲 Random Chat</h1>
+          <button onClick={toggleTheme}>{mode === 'light' ? <FaMoon /> : <FaSun />}</button>
         </div>
         <div className="top-buttons">
-          <button onClick={toggleTheme}>{mode === 'light' ? <FaMoon /> : <FaSun />}</button>
           <input
             type="text"
             placeholder="Paste YouTube link"
@@ -132,6 +129,9 @@ function App() {
             onChange={e => setYoutubeLink(e.target.value)}
           />
           <button onClick={shareYoutube}><FaYoutube /></button>
+          {!callAccepted && <button onClick={startVideoChat}>Start Video Chat</button>}
+          {callAccepted && <button onClick={leaveCall}>End Video Chat</button>}
+          <button onClick={findNewPartner}>Find New Partner</button>
         </div>
       </div>
 
@@ -140,7 +140,6 @@ function App() {
           <div className="video-section">
             <video playsInline muted ref={myVideo} autoPlay className="video" />
             <video playsInline ref={userVideo} autoPlay className="video" />
-            <button className="end-call-button" onClick={leaveCall}>End Call</button>
           </div>
         )}
 
@@ -150,7 +149,7 @@ function App() {
               <iframe
                 width="100%"
                 height="250"
-                src={`https://www.youtube.com/embed/${sharedYoutubeLink.split('v=')[1]}`}
+                src={`https://www.youtube.com/embed/${sharedYoutubeLink}`}
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -160,11 +159,11 @@ function App() {
           )}
 
           <div className="chat-box">
-            {messages.map((msg, index) => (
+            {connected ? messages.map((msg, index) => (
               <div key={index} className="chat-message">
                 <strong>{msg.sender}:</strong> {msg.text}
               </div>
-            ))}
+            )) : <div className="chat-message">Waiting for a partner...</div>}
           </div>
 
           <div className="input-row">
@@ -176,13 +175,6 @@ function App() {
               onKeyDown={e => e.key === 'Enter' && sendMessage()}
             />
             <button onClick={sendMessage}>Send</button>
-          </div>
-
-          <div className="bottom-controls">
-            <button onClick={() => window.location.reload()}>Find New Partner</button>
-            {!callAccepted && !callEnded && (
-              <button onClick={startVideoChat}>Start Video Chat</button>
-            )}
           </div>
         </div>
       </div>
