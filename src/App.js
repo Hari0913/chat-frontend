@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { FaMoon, FaSun, FaYoutube } from 'react-icons/fa';
+import { FaMoon, FaSun, FaYoutube } from 'react-icons/fa6';
 import SimplePeer from 'simple-peer';
 import io from 'socket.io-client';
 import './App.css';
 
-const socket = io('https://chat-frontend-hheb.onrender.com');
+const socket = io('https://chat-backend-k6v0.onrender.com');
 
 function App() {
   const [me, setMe] = useState('');
@@ -128,12 +128,14 @@ function App() {
       </div>
 
       <div className="main">
-        {callAccepted && !callEnded && (
-          <div className="video-section">
-            <video playsInline muted ref={myVideo} autoPlay className="video" />
-            <video playsInline ref={userVideo} autoPlay className="video" />
-          </div>
-        )}
+        <div className={`video-section ${callAccepted && !callEnded ? 'active' : ''}`}>
+          {callAccepted && !callEnded && (
+            <>
+              <video playsInline muted ref={myVideo} autoPlay className="video" />
+              <video playsInline ref={userVideo} autoPlay className="video" />
+            </>
+          )}
+        </div>
 
         <div className="chat-section">
           {sharedYoutubeLink && (
