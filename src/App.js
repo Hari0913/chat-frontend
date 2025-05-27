@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FaMoon, FaSun, FaYoutube } from 'react-icons/fa6';
+import { FaMoon, FaSun, FaYoutube } from 'react-icons/fa';
 import SimplePeer from 'simple-peer';
 import io from 'socket.io-client';
 import './App.css';
