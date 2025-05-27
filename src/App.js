@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import YouTube from 'react-youtube';
 import SimplePeer from 'simple-peer';
 import io from 'socket.io-client';
-import YouTube from 'react-youtube';
 import './App.css';
 
-const socket = io('https://chat-backend-5d2r.onrender.com');
+const socket = io('https://chat-backend-k6v0.onrender.com');
 
 export default function App() {
   const [stream, setStream] = useState(null);
