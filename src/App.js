@@ -28,7 +28,8 @@ function App() {
     socket.on('waiting', () => setConnected(false));
 
     socket.on('chat message', ({ sender, text }) => {
-      setMessages(prev => [...prev, { sender, text, fromMe: false }]);
+      const isFromMe = sender === me;
+      setMessages(prev => [...prev, { sender, text, fromMe: isFromMe }]);
     });
 
     socket.on('youtube-url', id => {
@@ -59,7 +60,7 @@ function App() {
         connectionRef.current.signal(signal);
       }
     });
-  }, []);
+  }, [me]);
 
   const callUser = () => {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
@@ -89,7 +90,6 @@ function App() {
   const sendMessage = () => {
     if (message.trim() && connected) {
       socket.emit('chat message', { sender: me, text: message });
-      setMessages(prev => [...prev, { sender: me, text: message, fromMe: true }]);
       setMessage('');
     }
   };
