@@ -23,13 +23,18 @@ function App() {
   const connectionRef = useRef();
 
   useEffect(() => {
-    socket.on('me', id => setMe(id));
+    socket.on('me', id => {
+      setMe(id);
+    });
+
     socket.on('paired', () => setConnected(true));
     socket.on('waiting', () => setConnected(false));
 
     socket.on('chat message', ({ sender, text }) => {
-      const isFromMe = sender === me;
-      setMessages(prev => [...prev, { sender, text, fromMe: isFromMe }]);
+      // Only add incoming messages not from self
+      if (sender !== me) {
+        setMessages(prev => [...prev, { sender, text }]);
+      }
     });
 
     socket.on('youtube-url', id => {
@@ -79,9 +84,7 @@ function App() {
   const leaveCall = () => {
     setCallEnded(true);
     if (connectionRef.current) connectionRef.current.destroy();
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
+    if (stream) stream.getTracks().forEach(track => track.stop());
     setStream(null);
     setCallAccepted(false);
     connectionRef.current = null;
@@ -89,14 +92,14 @@ function App() {
 
   const sendMessage = () => {
     if (message.trim() && connected) {
+      // Display it locally as 'Me'
+      setMessages(prev => [...prev, { sender: me, text: message }]);
       socket.emit('chat message', { sender: me, text: message });
       setMessage('');
     }
   };
 
-  const toggleTheme = () => {
-    setMode(prev => (prev === 'light' ? 'dark' : 'light'));
-  };
+  const toggleTheme = () => setMode(prev => (prev === 'light' ? 'dark' : 'light'));
 
   const extractYouTubeId = url => {
     try {
@@ -181,10 +184,10 @@ function App() {
               messages.map((msg, index) => (
                 <div
                   key={index}
-                  className={`chat-message ${msg.fromMe ? 'me' : 'stranger'}`}
+                  className={`chat-message ${msg.sender === me ? 'me' : 'stranger'}`}
                 >
                   <div className="bubble">
-                    <div className="sender">{msg.fromMe ? 'Me' : 'Stranger'}</div>
+                    <div className="sender">{msg.sender === me ? 'Me' : 'Stranger'}</div>
                     <div className="text">{msg.text}</div>
                   </div>
                 </div>
