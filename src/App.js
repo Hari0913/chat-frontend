@@ -89,7 +89,6 @@ function App() {
   const sendMessage = () => {
     if (message.trim() && connected) {
       socket.emit('chat message', { sender: me, text: message });
-      setMessages(prev => [...prev, { sender: me, text: message }]);
       setMessage('');
     }
   };
