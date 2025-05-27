@@ -9,12 +9,8 @@ const socket = io('https://chat-backend-k6v0.onrender.com');
 function App() {
   const [me, setMe] = useState('');
   const [stream, setStream] = useState(null);
-  const [receivingCall, setReceivingCall] = useState(false);
-  const [caller, setCaller] = useState('');
-  const [callerSignal, setCallerSignal] = useState();
   const [callAccepted, setCallAccepted] = useState(false);
   const [callEnded, setCallEnded] = useState(false);
-  const [partnerSocket, setPartnerSocket] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
   const [youtubeLink, setYoutubeLink] = useState('');
@@ -31,12 +27,6 @@ function App() {
     socket.on('paired', () => setConnected(true));
     socket.on('waiting', () => setConnected(false));
 
-    socket.on('callUser', data => {
-      setReceivingCall(true);
-      setCaller(data.from);
-      setCallerSignal(data.signal);
-    });
-
     socket.on('chat message', ({ sender, text }) => {
       setMessages(prev => [...prev, { sender: sender === 'stranger' ? 'Stranger' : 'Me', text }]);
     });
@@ -49,6 +39,26 @@ function App() {
       setConnected(false);
       leaveCall();
     });
+
+    socket.on('webrtc-signal', signal => {
+      if (!connectionRef.current) {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
+          setStream(localStream);
+          if (myVideo.current) myVideo.current.srcObject = localStream;
+
+          const peer = new SimplePeer({ initiator: false, trickle: false, stream: localStream });
+          peer.on('signal', data => socket.emit('webrtc-signal', data));
+          peer.on('stream', currentStream => {
+            if (userVideo.current) userVideo.current.srcObject = currentStream;
+          });
+          peer.signal(signal);
+          connectionRef.current = peer;
+          setCallAccepted(true);
+        });
+      } else {
+        connectionRef.current.signal(signal);
+      }
+    });
   }, []);
 
   const callUser = () => {
@@ -57,15 +67,9 @@ function App() {
       if (myVideo.current) myVideo.current.srcObject = localStream;
 
       const peer = new SimplePeer({ initiator: true, trickle: false, stream: localStream });
-      peer.on('signal', data => {
-        socket.emit('webrtc-signal', data);
-      });
+      peer.on('signal', data => socket.emit('webrtc-signal', data));
       peer.on('stream', currentStream => {
         if (userVideo.current) userVideo.current.srcObject = currentStream;
-      });
-      socket.on('webrtc-signal', signal => {
-        setCallAccepted(true);
-        peer.signal(signal);
       });
       connectionRef.current = peer;
     });
@@ -74,8 +78,12 @@ function App() {
   const leaveCall = () => {
     setCallEnded(true);
     if (connectionRef.current) connectionRef.current.destroy();
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
     setStream(null);
     setCallAccepted(false);
+    connectionRef.current = null;
   };
 
   const sendMessage = () => {
@@ -90,16 +98,24 @@ function App() {
     setMode(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  const shareYoutube = () => {
-    if (youtubeLink && connected) {
-      const videoId = youtubeLink.split('v=')[1]?.split('&')[0];
-      if (videoId) {
-        socket.emit('youtube-url', videoId);
-        setSharedYoutubeLink(videoId);
-        setYoutubeLink('');
-      }
+  const extractYouTubeId = url => {
+    try {
+      const regExp = /^.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+      const match = url.match(regExp);
+      return match && match[1].length === 11 ? match[1] : null;
+    } catch {
+      return null;
     }
   };
+
+  useEffect(() => {
+    const id = extractYouTubeId(youtubeLink);
+    if (id && connected) {
+      socket.emit('youtube-url', id);
+      setSharedYoutubeLink(id);
+      setYoutubeLink('');
+    }
+  }, [youtubeLink]);
 
   const startVideoChat = () => {
     if (window.confirm('By clicking OK, you will reveal your face to a random stranger. Proceed?')) {
@@ -128,7 +144,7 @@ function App() {
             value={youtubeLink}
             onChange={e => setYoutubeLink(e.target.value)}
           />
-          <button onClick={shareYoutube}><FaYoutube /></button>
+          <button><FaYoutube /></button>
           {!callAccepted && <button onClick={startVideoChat}>Start Video Chat</button>}
           {callAccepted && <button onClick={leaveCall}>End Video Chat</button>}
           <button onClick={findNewPartner}>Find New Partner</button>

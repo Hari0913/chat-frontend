@@ -124,6 +124,7 @@ body, html {
 
 .chat-message {
   margin-bottom: 8px;
+  word-break: break-word;
 }
 
 .chat-message strong {
@@ -207,5 +208,10 @@ body, html {
 
   .youtube iframe {
     height: 180px;
+  }
+
+  .video {
+    height: 200px;
+    object-fit: cover;
   }
 }
