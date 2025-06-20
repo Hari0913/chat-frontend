@@ -1,4 +1,3 @@
-// App.js (Final Render-Ready with WhatsApp-style chat & movable YouTube)
 import { useEffect, useRef, useState } from 'react';
 import { FaMoon, FaSun, FaYoutube } from 'react-icons/fa';
 import SimplePeer from 'simple-peer';
@@ -22,8 +21,9 @@ function App() {
   const [mode, setMode] = useState('light');
   const [connected, setConnected] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [dragPos, setDragPos] = useState({ x: 100, y: 100 });
+  const [dragPos, setDragPos] = useState({ x: 50, y: 50 });
   const dragRef = useRef();
+  const [touchStart, setTouchStart] = useState({ x: 0, y: 0 });
 
   const myVideo = useRef();
   const userVideo = useRef();
@@ -133,18 +133,27 @@ function App() {
     alert('Video chat feature coming soon!');
   };
 
+  // Drag functions (Desktop)
   const startDrag = (e) => {
     setDragging(true);
     dragRef.current = { x: e.clientX - dragPos.x, y: e.clientY - dragPos.y };
   };
-
   const duringDrag = (e) => {
     if (dragging) {
       setDragPos({ x: e.clientX - dragRef.current.x, y: e.clientY - dragRef.current.y });
     }
   };
-
   const endDrag = () => setDragging(false);
+
+  // Touch functions (Mobile)
+  const startTouch = (e) => {
+    const touch = e.touches[0];
+    setTouchStart({ x: touch.clientX - dragPos.x, y: touch.clientY - dragPos.y });
+  };
+  const duringTouch = (e) => {
+    const touch = e.touches[0];
+    setDragPos({ x: touch.clientX - touchStart.x, y: touch.clientY - touchStart.y });
+  };
 
   return (
     <div className={`app ${mode}`} onMouseMove={duringDrag} onMouseUp={endDrag}>
@@ -152,6 +161,10 @@ function App() {
         <div className="top-line">
           <h1>🎲 Random Chat</h1>
           <button onClick={toggleTheme}>{mode === 'light' ? <FaMoon /> : <FaSun />}</button>
+        </div>
+        <div className="connection-status">
+          <span className={`status-indicator ${connected ? 'status-connected' : 'status-disconnected'}`}></span>
+          <span>{connected ? 'Connected' : 'Waiting...'}</span>
         </div>
         <div className="top-buttons">
           {!myName && (
@@ -175,9 +188,16 @@ function App() {
             <video playsInline ref={userVideo} autoPlay className="video" />
           </div>
         )}
+
         <div className="chat-section">
           {sharedYoutubeLink && (
-            <div className="youtube" onMouseDown={startDrag} style={{ left: dragPos.x, top: dragPos.y, position: 'absolute', cursor: 'move' }}>
+            <div
+              className="youtube"
+              onMouseDown={startDrag}
+              onTouchStart={startTouch}
+              onTouchMove={duringTouch}
+              style={{ left: dragPos.x, top: dragPos.y, position: 'absolute' }}
+            >
               <iframe
                 width="300"
                 height="200"

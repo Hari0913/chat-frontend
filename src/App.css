@@ -1,4 +1,5 @@
-/* Global Styles */
+/* Final App.css for WhatsApp-style chat, movable YouTube, connection status, and theme toggle */
+
 body, html {
   margin: 0;
   padding: 0;
@@ -31,40 +32,8 @@ body, html {
 
 .header h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   text-align: center;
-  font-weight: 600;
-  letter-spacing: 1px;
-}
-
-/* Connection Status */
-.connection-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 5px 0;
-}
-
-.status-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  animation: pulse 1.5s infinite;
-}
-
-.status-connected {
-  background-color: #4caf50;
-}
-
-.status-disconnected {
-  background-color: #f44336;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 0.7; }
-  50% { transform: scale(1.3); opacity: 1; }
-  100% { transform: scale(1); opacity: 0.7; }
 }
 
 .top-buttons {
@@ -86,7 +55,7 @@ body, html {
 }
 
 .top-buttons button {
-  padding: 8px 12px;
+  padding: 8px 10px;
   font-size: 14px;
   background: #25d366;
   border: none;
@@ -101,11 +70,35 @@ body, html {
   transform: scale(1.05);
 }
 
+/* Connection Status */
+.connection-status {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-connected {
+  background-color: #0f0;
+}
+
+.status-disconnected {
+  background-color: #f00;
+}
+
 /* Main Layout */
 .main {
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
 .video-section {
@@ -134,7 +127,6 @@ body, html {
   padding: 10px;
   overflow: hidden;
   background-color: #ece5dd;
-  position: relative;
 }
 
 .dark .chat-section {
@@ -148,15 +140,13 @@ body, html {
   overflow: hidden;
   z-index: 999;
   cursor: move;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-  border-radius: 10px;
 }
 
 .youtube iframe {
   width: 300px;
   height: 200px;
   border-radius: 10px;
-  pointer-events: auto;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
 }
 
 /* Chat Box */
@@ -198,7 +188,6 @@ body, html {
   font-size: 14px;
   line-height: 1.4;
   animation: pop 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 @keyframes pop {
@@ -250,7 +239,6 @@ body, html {
   padding: 10px;
   border-radius: 20px;
   border: 1px solid #ccc;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .input-row button {
@@ -268,29 +256,6 @@ body, html {
   transform: scale(1.05);
 }
 
-/* Bottom Controls */
-.bottom-controls {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
-  gap: 10px;
-}
-
-.bottom-controls button {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  background-color: #128c7e;
-  color: white;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.bottom-controls button:hover {
-  background-color: #075e54;
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
   .main {
@@ -303,10 +268,6 @@ body, html {
   }
 
   .top-buttons {
-    flex-direction: column;
-  }
-
-  .bottom-controls {
     flex-direction: column;
   }
 
