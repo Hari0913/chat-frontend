@@ -93,10 +93,7 @@ function App() {
 
   const sendMessage = () => {
     if (message.trim() && connected) {
-      // Add "Me" message directly
-      setMessages(prev => [...prev, { senderId: me, senderName: 'Me', text: message }]);
-      // Send to partner only
-      socket.emit('chat message', message);
+      socket.emit('chat message', message); // let backend handle it
       setMessage('');
     }
   };
