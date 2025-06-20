@@ -2,8 +2,8 @@
 body, html {
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #e5ddd5;
+  font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+  background-color: #ece5dd;
   height: 100%;
 }
 
@@ -14,17 +14,17 @@ body, html {
 }
 
 .dark {
-  background-color: #1a1a1a;
-  color: #fff;
+  background-color: #121212;
+  color: white;
 }
 
+/* Header */
 .header {
-  background-color: #075e54;
-  color: white;
-  padding: 15px 20px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  padding: 10px 20px;
+  background: #075e54;
+  color: white;
 }
 
 .header h1 {
@@ -36,33 +36,36 @@ body, html {
 .top-buttons {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  margin-top: 8px;
+  align-items: center;
   flex-wrap: wrap;
+  margin-top: 10px;
+  gap: 8px;
 }
 
 .top-buttons input {
-  padding: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
   border-radius: 20px;
   border: none;
   width: 180px;
 }
 
 .top-buttons button {
-  padding: 8px 12px;
-  background-color: #25d366;
+  padding: 8px 10px;
+  font-size: 14px;
+  background: #25d366;
   border: none;
   border-radius: 20px;
-  color: white;
   cursor: pointer;
-  font-weight: bold;
+  color: white;
   transition: background 0.3s;
 }
 
 .top-buttons button:hover {
-  background-color: #1ebd5b;
+  background-color: #1ebc59;
 }
 
+/* Main Layout */
 .main {
   display: flex;
   flex: 1;
@@ -71,48 +74,63 @@ body, html {
 
 .video-section {
   flex: 1;
-  background-color: #000;
   display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background-color: #000;
   justify-content: center;
   align-items: center;
-  padding: 10px;
 }
 
 .video {
-  width: 95%;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
   border-radius: 10px;
-  background-color: #000;
+  background: #000;
 }
 
+/* Chat Section */
 .chat-section {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #ece5dd;
   padding: 10px;
+  overflow: hidden;
+  background-color: #ece5dd;
 }
 
-/* YouTube Embed */
+.dark .chat-section {
+  background-color: #2a2a2a;
+}
+
+/* YouTube */
 .youtube iframe {
   width: 100%;
   height: 200px;
-  border-radius: 10px;
   margin-bottom: 10px;
-  border: none;
+  border-radius: 10px;
 }
 
 /* Chat Box */
 .chat-box {
   flex: 1;
   overflow-y: auto;
+  padding: 10px;
+  background-color: #e5ddd5;
+  border-radius: 10px;
+  margin-bottom: 10px;
   display: flex;
   flex-direction: column;
-  padding: 10px;
-  gap: 8px;
+}
+
+.dark .chat-box {
+  background-color: #333;
 }
 
 .chat-message {
   display: flex;
+  margin: 5px 0;
 }
 
 .chat-message.me {
@@ -124,52 +142,50 @@ body, html {
 }
 
 .bubble {
-  max-width: 75%;
-  padding: 10px 14px;
-  border-radius: 7.5px;
-  font-size: 14px;
+  max-width: 70%;
+  padding: 10px 15px;
+  border-radius: 7px;
   word-wrap: break-word;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
   position: relative;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
-/* My message (green) */
 .chat-message.me .bubble {
   background-color: #dcf8c6;
   border-top-right-radius: 0;
-  color: #303030;
 }
 
-/* Stranger message (white) */
 .chat-message.stranger .bubble {
   background-color: #fff;
   border-top-left-radius: 0;
-  color: #303030;
 }
 
-/* Sender name above message */
 .sender {
-  font-weight: bold;
   font-size: 12px;
+  font-weight: bold;
   margin-bottom: 4px;
   color: #555;
 }
 
-/* System message */
+.text {
+  font-size: 14px;
+}
+
 .system-message {
   text-align: center;
-  color: #777;
+  color: #888;
   font-style: italic;
-  margin: 8px 0;
+  margin: 10px 0;
 }
 
 /* Input Row */
 .input-row {
   display: flex;
-  padding: 8px;
-  border-top: 1px solid #ccc;
-  background-color: #f0f0f0;
   gap: 10px;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+  background: #f0f0f0;
 }
 
 .input-row input {
@@ -177,25 +193,46 @@ body, html {
   padding: 10px;
   border-radius: 20px;
   border: 1px solid #ccc;
-  outline: none;
 }
 
 .input-row button {
   padding: 10px 16px;
-  background-color: #25d366;
   border: none;
-  border-radius: 20px;
+  background-color: #128c7e;
   color: white;
-  font-weight: bold;
+  border-radius: 20px;
   cursor: pointer;
   transition: background 0.3s;
 }
 
 .input-row button:hover {
-  background-color: #1ebd5b;
+  background-color: #075e54;
 }
 
-/* Responsive */
+/* Bottom Controls */
+.bottom-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 10px;
+}
+
+.bottom-controls button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background-color: #128c7e;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.bottom-controls button:hover {
+  background-color: #075e54;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
   .main {
     flex-direction: column;
@@ -206,6 +243,18 @@ body, html {
     width: 100%;
   }
 
+  .top-buttons {
+    flex-direction: column;
+  }
+
+  .bottom-controls {
+    flex-direction: column;
+  }
+
+  .header h1 {
+    font-size: 18px;
+  }
+
   .youtube iframe {
     height: 180px;
   }
@@ -213,9 +262,5 @@ body, html {
   .video {
     height: 200px;
     object-fit: cover;
-  }
-
-  .top-buttons {
-    flex-direction: column;
   }
 }

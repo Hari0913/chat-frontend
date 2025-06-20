@@ -10,6 +10,7 @@ function App() {
   const [me, setMe] = useState('');
   const [myName, setMyName] = useState('');
   const [partnerName, setPartnerName] = useState('Stranger');
+  const [nameInput, setNameInput] = useState('');
   const [stream, setStream] = useState(null);
   const [callAccepted, setCallAccepted] = useState(false);
   const [callEnded, setCallEnded] = useState(false);
@@ -19,16 +20,13 @@ function App() {
   const [sharedYoutubeLink, setSharedYoutubeLink] = useState('');
   const [mode, setMode] = useState('light');
   const [connected, setConnected] = useState(false);
-  const [nameSet, setNameSet] = useState(false);
 
   const myVideo = useRef();
   const userVideo = useRef();
   const connectionRef = useRef();
 
   useEffect(() => {
-    socket.on('me', id => {
-      setMe(id);
-    });
+    socket.on('me', id => setMe(id));
 
     socket.on('paired', ({ partnerId, partnerName }) => {
       setConnected(true);
@@ -37,16 +35,15 @@ function App() {
 
     socket.on('waiting', () => setConnected(false));
 
-    socket.on('chat message', ({ sender, text }) => {
-      setMessages(prev => [...prev, { sender, text }]);
+    socket.on('chat message', ({ senderId, senderName, text }) => {
+      setMessages(prev => [...prev, { senderId, senderName, text }]);
     });
 
-    socket.on('youtube-url', id => {
-      setSharedYoutubeLink(id);
-    });
+    socket.on('youtube-url', id => setSharedYoutubeLink(id));
 
     socket.on('partner left', () => {
       setConnected(false);
+      setPartnerName('Stranger');
       leaveCall();
     });
 
@@ -70,13 +67,6 @@ function App() {
       }
     });
   }, []);
-
-  const setName = () => {
-    if (myName.trim()) {
-      socket.emit('set-name', myName);
-      setNameSet(true);
-    }
-  };
 
   const callUser = () => {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
@@ -103,7 +93,7 @@ function App() {
 
   const sendMessage = () => {
     if (message.trim() && connected) {
-      setMessages(prev => [...prev, { sender: 'You', text: message }]);
+      setMessages(prev => [...prev, { senderId: me, senderName: 'Me', text: message }]);
       socket.emit('chat message', message);
       setMessage('');
     }
@@ -143,29 +133,35 @@ function App() {
     leaveCall();
   };
 
-  if (!nameSet) {
-    return (
-      <div className="name-input">
-        <h2>Enter Your Name</h2>
-        <input
-          type="text"
-          placeholder="Your name"
-          value={myName}
-          onChange={e => setMyName(e.target.value)}
-        />
-        <button onClick={setName}>Join Chat</button>
-      </div>
-    );
-  }
+  const setName = () => {
+    if (nameInput.trim()) {
+      socket.emit('set-name', nameInput);
+      setMyName(nameInput);
+    }
+  };
 
   return (
     <div className={`app ${mode}`}>
       <div className="header">
         <div className="top-line">
           <h1>🎲 Random Chat</h1>
-          <button onClick={toggleTheme}>{mode === 'light' ? <FaMoon /> : <FaSun />}</button>
+          <button onClick={toggleTheme}>
+            {mode === 'light' ? <FaMoon /> : <FaSun />}
+          </button>
         </div>
+
         <div className="top-buttons">
+          {!myName && (
+            <>
+              <input
+                type="text"
+                placeholder="Enter your name"
+                value={nameInput}
+                onChange={e => setNameInput(e.target.value)}
+              />
+              <button onClick={setName}>Set Name</button>
+            </>
+          )}
           <input
             type="text"
             placeholder="Paste YouTube link"
@@ -205,9 +201,12 @@ function App() {
           <div className="chat-box">
             {connected ? (
               messages.map((msg, index) => (
-                <div key={index} className={`chat-message ${msg.sender === 'You' ? 'me' : 'stranger'}`}>
+                <div
+                  key={index}
+                  className={`chat-message ${msg.senderId === me ? 'me' : 'stranger'}`}
+                >
                   <div className="bubble">
-                    <div className="sender">{msg.sender === 'You' ? 'Me' : partnerName}</div>
+                    <div className="sender">{msg.senderId === me ? 'Me' : msg.senderName}</div>
                     <div className="text">{msg.text}</div>
                   </div>
                 </div>
