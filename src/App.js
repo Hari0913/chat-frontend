@@ -93,7 +93,7 @@ function App() {
 
   const sendMessage = () => {
     if (message.trim() && connected) {
-      socket.emit('chat message', message); // let backend handle it
+      socket.emit('chat message', message); // Backend handles labels
       setMessage('');
     }
   };
@@ -205,7 +205,8 @@ function App() {
                   className={`chat-message ${msg.senderId === me ? 'me' : 'stranger'}`}
                 >
                   <div className="bubble">
-                    <div className="sender">{msg.senderId === me ? 'Me' : msg.senderName}</div>
+                    {/* ✅ FIXED LINE HERE */}
+                    <div className="sender">{msg.senderName}</div>
                     <div className="text">{msg.text}</div>
                   </div>
                 </div>
