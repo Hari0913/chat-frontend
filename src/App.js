@@ -1,3 +1,4 @@
+// App.js (Frontend with draggable/resizable YouTube iframe)
 import { useEffect, useRef, useState } from 'react';
 import { FaMoon, FaSun, FaYoutube } from 'react-icons/fa';
 import SimplePeer from 'simple-peer';
@@ -20,39 +21,35 @@ function App() {
   const [sharedYoutubeLink, setSharedYoutubeLink] = useState('');
   const [mode, setMode] = useState('light');
   const [connected, setConnected] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [dragPos, setDragPos] = useState({ x: 100, y: 100 });
 
   const myVideo = useRef();
   const userVideo = useRef();
   const connectionRef = useRef();
+  const dragRef = useRef();
 
   useEffect(() => {
     socket.on('me', id => setMe(id));
-
     socket.on('paired', ({ partnerId, partnerName }) => {
       setConnected(true);
       setPartnerName(partnerName || 'Stranger');
     });
-
     socket.on('waiting', () => setConnected(false));
-
     socket.on('chat message', ({ senderId, senderName, text }) => {
       setMessages(prev => [...prev, { senderId, senderName, text }]);
     });
-
     socket.on('youtube-url', id => setSharedYoutubeLink(id));
-
     socket.on('partner left', () => {
       setConnected(false);
       setPartnerName('Stranger');
       leaveCall();
     });
-
     socket.on('webrtc-signal', signal => {
       if (!connectionRef.current) {
         navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
           setStream(localStream);
           if (myVideo.current) myVideo.current.srcObject = localStream;
-
           const peer = new SimplePeer({ initiator: false, trickle: false, stream: localStream });
           peer.on('signal', data => socket.emit('webrtc-signal', data));
           peer.on('stream', currentStream => {
@@ -72,7 +69,6 @@ function App() {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
       setStream(localStream);
       if (myVideo.current) myVideo.current.srcObject = localStream;
-
       const peer = new SimplePeer({ initiator: true, trickle: false, stream: localStream });
       peer.on('signal', data => socket.emit('webrtc-signal', data));
       peer.on('stream', currentStream => {
@@ -93,7 +89,7 @@ function App() {
 
   const sendMessage = () => {
     if (message.trim() && connected) {
-      socket.emit('chat message', message); // Backend handles labels
+      socket.emit('chat message', message);
       setMessage('');
     }
   };
@@ -119,12 +115,6 @@ function App() {
     }
   };
 
-  const startVideoChat = () => {
-    if (window.confirm('By clicking OK, you will reveal your face to a random stranger. Proceed?')) {
-      callUser();
-    }
-  };
-
   const findNewPartner = () => {
     socket.emit('find-new-partner');
     setMessages([]);
@@ -139,34 +129,29 @@ function App() {
     }
   };
 
+  const startDrag = (e) => {
+    setDragging(true);
+    dragRef.current = { x: e.clientX - dragPos.x, y: e.clientY - dragPos.y };
+  };
+
+  const duringDrag = (e) => {
+    if (dragging) {
+      setDragPos({ x: e.clientX - dragRef.current.x, y: e.clientY - dragRef.current.y });
+    }
+  };
+
+  const endDrag = () => setDragging(false);
+
   return (
-    <div className={`app ${mode}`}>
+    <div className={`app ${mode}`} onMouseMove={duringDrag} onMouseUp={endDrag}>
       <div className="header">
         <div className="top-line">
           <h1>🎲 Random Chat</h1>
-          <button onClick={toggleTheme}>
-            {mode === 'light' ? <FaMoon /> : <FaSun />}
-          </button>
+          <button onClick={toggleTheme}>{mode === 'light' ? <FaMoon /> : <FaSun />}</button>
         </div>
-
         <div className="top-buttons">
-          {!myName && (
-            <>
-              <input
-                type="text"
-                placeholder="Enter your name"
-                value={nameInput}
-                onChange={e => setNameInput(e.target.value)}
-              />
-              <button onClick={setName}>Set Name</button>
-            </>
-          )}
-          <input
-            type="text"
-            placeholder="Paste YouTube link"
-            value={youtubeLink}
-            onChange={e => setYoutubeLink(e.target.value)}
-          />
+          {!myName && (<><input type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="Enter your name" /><button onClick={setName}>Set Name</button></>)}
+          <input type="text" placeholder="Paste YouTube link" value={youtubeLink} onChange={e => setYoutubeLink(e.target.value)} />
           <button onClick={shareYoutubeVideo}><FaYoutube /></button>
           {!callAccepted && <button onClick={startVideoChat}>Start Video Chat</button>}
           {callAccepted && <button onClick={leaveCall}>End Video Chat</button>}
@@ -175,55 +160,14 @@ function App() {
       </div>
 
       <div className="main">
-        {callAccepted && !callEnded && (
-          <div className="video-section">
-            <video playsInline muted ref={myVideo} autoPlay className="video" />
-            <video playsInline ref={userVideo} autoPlay className="video" />
-          </div>
-        )}
-
+        {callAccepted && !callEnded && <div className="video-section"><video playsInline muted ref={myVideo} autoPlay className="video" /><video playsInline ref={userVideo} autoPlay className="video" /></div>}
         <div className="chat-section">
-          {sharedYoutubeLink && (
-            <div className="youtube">
-              <iframe
-                width="100%"
-                height="250"
-                src={`https://www.youtube.com/embed/${sharedYoutubeLink}`}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                title="YouTube video"
-              ></iframe>
-            </div>
-          )}
-
+          {sharedYoutubeLink && <div className="youtube" onMouseDown={startDrag} style={{ left: dragPos.x, top: dragPos.y, position: 'absolute', cursor: 'move' }}><iframe width="300" height="200" src={`https://www.youtube.com/embed/${sharedYoutubeLink}`} frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen title="YouTube Video" /></div>}
           <div className="chat-box">
-            {connected ? (
-              messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`chat-message ${msg.senderId === me ? 'me' : 'stranger'}`}
-                >
-                  <div className="bubble">
-                    {/* ✅ FIXED LINE HERE */}
-                    <div className="sender">{msg.senderName}</div>
-                    <div className="text">{msg.text}</div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="chat-message system-message">Waiting for a partner...</div>
-            )}
+            {connected ? messages.map((msg, index) => (<div key={index} className={`chat-message ${msg.senderId === me ? 'me' : 'stranger'}`}><div className="bubble"><div className="sender">{msg.senderName}</div><div className="text">{msg.text}</div></div></div>)) : (<div className="chat-message system-message">Waiting for a partner...</div>)}
           </div>
-
           <div className="input-row">
-            <input
-              type="text"
-              placeholder="Type your message"
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            />
+            <input type="text" placeholder="Type your message" value={message} onChange={e => setMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMessage()} />
             <button onClick={sendMessage}>Send</button>
           </div>
         </div>
