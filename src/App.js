@@ -1,4 +1,4 @@
-// App.js (Fixed, Render-Deployable, No Logic Broken)
+// App.js (Final Render-Ready with WhatsApp-style chat & movable YouTube)
 import { useEffect, useRef, useState } from 'react';
 import { FaMoon, FaSun, FaYoutube } from 'react-icons/fa';
 import SimplePeer from 'simple-peer';
@@ -23,11 +23,11 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [dragPos, setDragPos] = useState({ x: 100, y: 100 });
+  const dragRef = useRef();
 
   const myVideo = useRef();
   const userVideo = useRef();
   const connectionRef = useRef();
-  const dragRef = useRef();
 
   useEffect(() => {
     socket.on('me', id => setMe(id));
@@ -129,7 +129,6 @@ function App() {
     }
   };
 
-  // Temporary placeholder to avoid Render build error
   const startVideoChat = () => {
     alert('Video chat feature coming soon!');
   };

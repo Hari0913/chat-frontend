@@ -144,8 +144,6 @@ body, html {
 /* Movable YouTube */
 .youtube {
   position: absolute;
-  top: 50px;
-  left: 50px;
   resize: both;
   overflow: hidden;
   z-index: 999;
