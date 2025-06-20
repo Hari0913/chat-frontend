@@ -36,10 +36,7 @@ function App() {
     socket.on('waiting', () => setConnected(false));
 
     socket.on('chat message', ({ senderId, senderName, text }) => {
-      // Only push partner's message
-      if (senderId !== me) {
-        setMessages(prev => [...prev, { senderId, senderName, text }]);
-      }
+      setMessages(prev => [...prev, { senderId, senderName, text }]);
     });
 
     socket.on('youtube-url', id => setSharedYoutubeLink(id));
@@ -69,7 +66,7 @@ function App() {
         connectionRef.current.signal(signal);
       }
     });
-  }, [me]);
+  }, []);
 
   const callUser = () => {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
@@ -96,8 +93,9 @@ function App() {
 
   const sendMessage = () => {
     if (message.trim() && connected) {
-      // Directly push self message (not from socket)
+      // Add "Me" message directly
       setMessages(prev => [...prev, { senderId: me, senderName: 'Me', text: message }]);
+      // Send to partner only
       socket.emit('chat message', message);
       setMessage('');
     }
