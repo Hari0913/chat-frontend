@@ -2,8 +2,9 @@
 body, html {
   margin: 0;
   padding: 0;
-  font-family: 'Arial', sans-serif;
-  background-color: #f4f4f4;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #e5ddd5;
+  height: 100%;
 }
 
 .app {
@@ -14,54 +15,54 @@ body, html {
 
 .dark {
   background-color: #1a1a1a;
-  color: white;
+  color: #fff;
 }
 
 .header {
+  background-color: #075e54;
+  color: white;
+  padding: 15px 20px;
   display: flex;
   flex-direction: column;
-  padding: 10px 20px;
-  background: #6200ea;
-  color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .header h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   text-align: center;
 }
 
 .top-buttons {
   display: flex;
   justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 10px;
   gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
 }
 
 .top-buttons input {
-  padding: 6px 10px;
-  font-size: 14px;
-  border-radius: 5px;
+  padding: 8px;
+  border-radius: 20px;
   border: none;
-  width: 200px;
+  width: 180px;
 }
 
 .top-buttons button {
-  padding: 8px 10px;
-  font-size: 14px;
-  background: #ffffff;
+  padding: 8px 12px;
+  background-color: #25d366;
   border: none;
-  border-radius: 5px;
+  border-radius: 20px;
+  color: white;
   cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
 }
 
 .top-buttons button:hover {
-  background-color: #ddd;
+  background-color: #1ebd5b;
 }
 
-/* Main Layout */
 .main {
   display: flex;
   flex: 1;
@@ -70,165 +71,48 @@ body, html {
 
 .video-section {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 10px;
   background-color: #000;
+  display: flex;
   justify-content: center;
   align-items: center;
+  padding: 10px;
 }
 
 .video {
-  width: 100%;
-  max-width: 100%;
-  height: auto;
-  margin: 10px 0;
+  width: 95%;
   border-radius: 10px;
-  background: #000;
+  background-color: #000;
 }
 
 .chat-section {
   flex: 1;
   display: flex;
   flex-direction: column;
+  background-color: #ece5dd;
   padding: 10px;
-  overflow: hidden;
-  background-color: #f9f9f9;
 }
 
-.dark .chat-section {
-  background-color: #2a2a2a;
-}
-
-/* YouTube Video */
+/* YouTube Embed */
 .youtube iframe {
   width: 100%;
   height: 200px;
-  margin-bottom: 10px;
   border-radius: 10px;
+  margin-bottom: 10px;
+  border: none;
 }
 
 /* Chat Box */
 .chat-box {
   flex: 1;
   overflow-y: auto;
-  padding: 10px;
-  background-color: #fff;
-  border-radius: 10px;
-  margin-bottom: 10px;
-}
-
-.dark .chat-box {
-  background-color: #333;
-}
-
-.chat-message {
-  margin-bottom: 8px;
-  word-break: break-word;
-}
-
-.chat-message strong {
-  color: #333;
-}
-
-.dark .chat-message strong {
-  color: #f0f0f0;
-}
-
-/* Input Row */
-.input-row {
-  display: flex;
-  gap: 10px;
-}
-
-.input-row input {
-  flex: 1;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-.input-row button {
-  padding: 10px;
-  background-color: #6200ea;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.input-row button:hover {
-  background-color: #4b00b5;
-}
-
-/* Bottom Controls */
-.bottom-controls {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
-  gap: 10px;
-}
-
-.bottom-controls button {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  background-color: #6200ea;
-  color: white;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.bottom-controls button:hover {
-  background-color: #4b00b5;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .main {
-    flex-direction: column;
-  }
-
-  .video-section,
-  .chat-section {
-    width: 100%;
-  }
-
-  .top-buttons {
-    flex-direction: column;
-  }
-
-  .bottom-controls {
-    flex-direction: column;
-  }
-
-  .header h1 {
-    font-size: 20px;
-  }
-
-  .youtube iframe {
-    height: 180px;
-  }
-
-  .video {
-    height: 200px;
-    object-fit: cover;
-  }
-}
-
-
-
-.chat-box {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
   display: flex;
   flex-direction: column;
+  padding: 10px;
+  gap: 8px;
 }
 
 .chat-message {
   display: flex;
-  margin: 5px 0;
 }
 
 .chat-message.me {
@@ -240,117 +124,98 @@ body, html {
 }
 
 .bubble {
-  max-width: 70%;
-  padding: 10px;
-  border-radius: 10px;
-  background-color: #f1f0f0;
-  position: relative;
+  max-width: 75%;
+  padding: 10px 14px;
+  border-radius: 7.5px;
+  font-size: 14px;
   word-wrap: break-word;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+  position: relative;
 }
 
+/* My message (green) */
 .chat-message.me .bubble {
   background-color: #dcf8c6;
-  text-align: right;
   border-top-right-radius: 0;
+  color: #303030;
 }
 
+/* Stranger message (white) */
 .chat-message.stranger .bubble {
-  background-color: #ffffff;
-  text-align: left;
+  background-color: #fff;
   border-top-left-radius: 0;
+  color: #303030;
 }
 
+/* Sender name above message */
 .sender {
-  font-size: 12px;
   font-weight: bold;
+  font-size: 12px;
   margin-bottom: 4px;
   color: #555;
 }
 
-.text {
-  font-size: 14px;
-}
-
+/* System message */
 .system-message {
   text-align: center;
-  color: #888;
+  color: #777;
   font-style: italic;
+  margin: 8px 0;
 }
 
-
-.chat-box {
-  max-height: 400px;
-  overflow-y: auto;
-  padding: 1rem;
-  background: #e5ddd5;
-}
-
-.chat-message {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 10px;
-}
-
-.chat-message .bubble {
-  max-width: 75%;
-  padding: 10px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.chat-message.me {
-  align-items: flex-end;
-}
-
-.chat-message.me .bubble {
-  background-color: #dcf8c6;
-  color: #000;
-  border-bottom-right-radius: 0;
-}
-
-.chat-message.stranger {
-  align-items: flex-start;
-}
-
-.chat-message.stranger .bubble {
-  background-color: #fff;
-  color: #000;
-  border-bottom-left-radius: 0;
-}
-
-.chat-message .sender {
-  font-weight: bold;
-  font-size: 12px;
-  margin-bottom: 3px;
-  color: #555;
-}
-
-.chat-message.system-message {
-  text-align: center;
-  color: #888;
-  font-style: italic;
-}
-
+/* Input Row */
 .input-row {
   display: flex;
-  padding: 10px;
+  padding: 8px;
   border-top: 1px solid #ccc;
-  background: #fff;
+  background-color: #f0f0f0;
+  gap: 10px;
 }
 
 .input-row input {
   flex: 1;
   padding: 10px;
-  border-radius: 4px;
+  border-radius: 20px;
   border: 1px solid #ccc;
+  outline: none;
 }
 
 .input-row button {
-  margin-left: 8px;
   padding: 10px 16px;
+  background-color: #25d366;
   border: none;
-  background-color: #128c7e;
+  border-radius: 20px;
   color: white;
-  border-radius: 4px;
+  font-weight: bold;
   cursor: pointer;
+  transition: background 0.3s;
+}
+
+.input-row button:hover {
+  background-color: #1ebd5b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main {
+    flex-direction: column;
+  }
+
+  .video-section,
+  .chat-section {
+    width: 100%;
+  }
+
+  .youtube iframe {
+    height: 180px;
+  }
+
+  .video {
+    height: 200px;
+    object-fit: cover;
+  }
+
+  .top-buttons {
+    flex-direction: column;
+  }
 }

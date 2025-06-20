@@ -8,6 +8,8 @@ const socket = io('https://chat-backend-k6v0.onrender.com');
 
 function App() {
   const [me, setMe] = useState('');
+  const [myName, setMyName] = useState('');
+  const [partnerName, setPartnerName] = useState('Stranger');
   const [stream, setStream] = useState(null);
   const [callAccepted, setCallAccepted] = useState(false);
   const [callEnded, setCallEnded] = useState(false);
@@ -17,6 +19,7 @@ function App() {
   const [sharedYoutubeLink, setSharedYoutubeLink] = useState('');
   const [mode, setMode] = useState('light');
   const [connected, setConnected] = useState(false);
+  const [nameSet, setNameSet] = useState(false);
 
   const myVideo = useRef();
   const userVideo = useRef();
@@ -27,14 +30,15 @@ function App() {
       setMe(id);
     });
 
-    socket.on('paired', () => setConnected(true));
+    socket.on('paired', ({ partnerId, partnerName }) => {
+      setConnected(true);
+      setPartnerName(partnerName || 'Stranger');
+    });
+
     socket.on('waiting', () => setConnected(false));
 
     socket.on('chat message', ({ sender, text }) => {
-      // Only add incoming messages not from self
-      if (sender !== me) {
-        setMessages(prev => [...prev, { sender, text }]);
-      }
+      setMessages(prev => [...prev, { sender, text }]);
     });
 
     socket.on('youtube-url', id => {
@@ -65,7 +69,14 @@ function App() {
         connectionRef.current.signal(signal);
       }
     });
-  }, [me]);
+  }, []);
+
+  const setName = () => {
+    if (myName.trim()) {
+      socket.emit('set-name', myName);
+      setNameSet(true);
+    }
+  };
 
   const callUser = () => {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(localStream => {
@@ -92,9 +103,8 @@ function App() {
 
   const sendMessage = () => {
     if (message.trim() && connected) {
-      // Display it locally as 'Me'
-      setMessages(prev => [...prev, { sender: me, text: message }]);
-      socket.emit('chat message', { sender: me, text: message });
+      setMessages(prev => [...prev, { sender: 'You', text: message }]);
+      socket.emit('chat message', message);
       setMessage('');
     }
   };
@@ -133,14 +143,27 @@ function App() {
     leaveCall();
   };
 
+  if (!nameSet) {
+    return (
+      <div className="name-input">
+        <h2>Enter Your Name</h2>
+        <input
+          type="text"
+          placeholder="Your name"
+          value={myName}
+          onChange={e => setMyName(e.target.value)}
+        />
+        <button onClick={setName}>Join Chat</button>
+      </div>
+    );
+  }
+
   return (
     <div className={`app ${mode}`}>
       <div className="header">
         <div className="top-line">
           <h1>🎲 Random Chat</h1>
-          <button onClick={toggleTheme}>
-            {mode === 'light' ? <FaMoon /> : <FaSun />}
-          </button>
+          <button onClick={toggleTheme}>{mode === 'light' ? <FaMoon /> : <FaSun />}</button>
         </div>
         <div className="top-buttons">
           <input
@@ -182,12 +205,9 @@ function App() {
           <div className="chat-box">
             {connected ? (
               messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`chat-message ${msg.sender === me ? 'me' : 'stranger'}`}
-                >
+                <div key={index} className={`chat-message ${msg.sender === 'You' ? 'me' : 'stranger'}`}>
                   <div className="bubble">
-                    <div className="sender">{msg.sender === me ? 'Me' : 'Stranger'}</div>
+                    <div className="sender">{msg.sender === 'You' ? 'Me' : partnerName}</div>
                     <div className="text">{msg.text}</div>
                   </div>
                 </div>
