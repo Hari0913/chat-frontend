@@ -1,4 +1,4 @@
-// App.js (Frontend with draggable/resizable YouTube iframe)
+// App.js (Fixed, Render-Deployable, No Logic Broken)
 import { useEffect, useRef, useState } from 'react';
 import { FaMoon, FaSun, FaYoutube } from 'react-icons/fa';
 import SimplePeer from 'simple-peer';
@@ -129,6 +129,11 @@ function App() {
     }
   };
 
+  // Temporary placeholder to avoid Render build error
+  const startVideoChat = () => {
+    alert('Video chat feature coming soon!');
+  };
+
   const startDrag = (e) => {
     setDragging(true);
     dragRef.current = { x: e.clientX - dragPos.x, y: e.clientY - dragPos.y };
@@ -150,7 +155,12 @@ function App() {
           <button onClick={toggleTheme}>{mode === 'light' ? <FaMoon /> : <FaSun />}</button>
         </div>
         <div className="top-buttons">
-          {!myName && (<><input type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="Enter your name" /><button onClick={setName}>Set Name</button></>)}
+          {!myName && (
+            <>
+              <input type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="Enter your name" />
+              <button onClick={setName}>Set Name</button>
+            </>
+          )}
           <input type="text" placeholder="Paste YouTube link" value={youtubeLink} onChange={e => setYoutubeLink(e.target.value)} />
           <button onClick={shareYoutubeVideo}><FaYoutube /></button>
           {!callAccepted && <button onClick={startVideoChat}>Start Video Chat</button>}
@@ -160,14 +170,46 @@ function App() {
       </div>
 
       <div className="main">
-        {callAccepted && !callEnded && <div className="video-section"><video playsInline muted ref={myVideo} autoPlay className="video" /><video playsInline ref={userVideo} autoPlay className="video" /></div>}
+        {callAccepted && !callEnded && (
+          <div className="video-section">
+            <video playsInline muted ref={myVideo} autoPlay className="video" />
+            <video playsInline ref={userVideo} autoPlay className="video" />
+          </div>
+        )}
         <div className="chat-section">
-          {sharedYoutubeLink && <div className="youtube" onMouseDown={startDrag} style={{ left: dragPos.x, top: dragPos.y, position: 'absolute', cursor: 'move' }}><iframe width="300" height="200" src={`https://www.youtube.com/embed/${sharedYoutubeLink}`} frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen title="YouTube Video" /></div>}
+          {sharedYoutubeLink && (
+            <div className="youtube" onMouseDown={startDrag} style={{ left: dragPos.x, top: dragPos.y, position: 'absolute', cursor: 'move' }}>
+              <iframe
+                width="300"
+                height="200"
+                src={`https://www.youtube.com/embed/${sharedYoutubeLink}`}
+                frameBorder="0"
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                title="YouTube Video"
+              />
+            </div>
+          )}
           <div className="chat-box">
-            {connected ? messages.map((msg, index) => (<div key={index} className={`chat-message ${msg.senderId === me ? 'me' : 'stranger'}`}><div className="bubble"><div className="sender">{msg.senderName}</div><div className="text">{msg.text}</div></div></div>)) : (<div className="chat-message system-message">Waiting for a partner...</div>)}
+            {connected ? messages.map((msg, index) => (
+              <div key={index} className={`chat-message ${msg.senderId === me ? 'me' : 'stranger'}`}>
+                <div className="bubble">
+                  <div className="sender">{msg.senderName}</div>
+                  <div className="text">{msg.text}</div>
+                </div>
+              </div>
+            )) : (
+              <div className="chat-message system-message">Waiting for a partner...</div>
+            )}
           </div>
           <div className="input-row">
-            <input type="text" placeholder="Type your message" value={message} onChange={e => setMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMessage()} />
+            <input
+              type="text"
+              placeholder="Type your message"
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            />
             <button onClick={sendMessage}>Send</button>
           </div>
         </div>
