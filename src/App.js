@@ -1,3 +1,6 @@
+// Updated App.js with WhatsApp-style chat bubbles, clean classic look, left/right alignment
+// (No change to backend or main logic as per request)
+
 import { useEffect, useRef, useState } from 'react';
 import { FaMoon, FaSun, FaYoutube } from 'react-icons/fa';
 import SimplePeer from 'simple-peer';
