@@ -1,21 +1,6 @@
-// Key problems you faced and full fix for App.js explained:
-
-/**
- * PROBLEMS IN YOUR LAST APP.JS:
- * 1. Message Side (Right/Left) not properly separating because:
- *    - Server sends 'Me' for senderName but same senderId as client => so client confuses.
- *    - Proper fix: Use senderId comparison to 'me' id only, not senderName.
- *
- * 2. YouTube iframe NOT freely movable/resizable:
- *    - You used onMouseDown / onMouseMove => these do not work on mobile well.
- *    - Need to use 'react-rnd' for cross-platform draggable + resizable behavior.
- */
-
-// Final clean App.js for WhatsApp-style chat + YouTube move/resizable fully working
-
 import { useEffect, useRef, useState } from 'react';
 import { FaMoon, FaSun } from 'react-icons/fa';
-import { Rnd } from 'react-rnd';
+import { Rnd } from 'react-rnd'; // Draggable component
 import SimplePeer from 'simple-peer';
 import io from 'socket.io-client';
 import './App.css';
@@ -41,6 +26,16 @@ function App() {
   const userVideo = useRef();
   const connectionRef = useRef();
 
+  // ✅ FIX: Define leaveCall to prevent 'not defined' error
+  const leaveCall = () => {
+    setCallEnded(true);
+    if (connectionRef.current) connectionRef.current.destroy();
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    setStream(null);
+    setCallAccepted(false);
+    connectionRef.current = null;
+  };
+
   useEffect(() => {
     socket.on('me', id => setMe(id));
     socket.on('paired', ({ partnerId, partnerName }) => {
@@ -55,7 +50,7 @@ function App() {
     socket.on('partner left', () => {
       setConnected(false);
       setPartnerName('Stranger');
-      leaveCall();
+      leaveCall(); // Now defined properly
     });
     socket.on('webrtc-signal', signal => {
       if (!connectionRef.current) {
@@ -152,9 +147,3 @@ function App() {
 }
 
 export default App;
-
-// Main Fixes Done:
-// 1. Rnd library added for FREE movement + resizing iframe
-// 2. Message side determined via: msg.senderId === me ? 'me' : 'stranger' (fixed why both were left)
-// 3. Clean untouched socket / logic
-// 4. Fully Render deployable
